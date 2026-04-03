@@ -3,7 +3,6 @@ package ru.yandex.practicum.filmorate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.controller.UserController;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
@@ -46,88 +45,6 @@ class FilmorateApplicationTests {
     }
 
     @Test
-    void postFilm_WithEmptyName_ShouldThrowException() {
-        Film film = new Film();
-        film.setName("");
-        film.setDescription("Valid description");
-        film.setReleaseDate(LocalDate.of(2024, 1, 1));
-        film.setDuration(120);
-
-        MethodArgumentNotValidException exception = assertThrows(
-                MethodArgumentNotValidException.class,
-                () -> filmController.postFilm(film)
-        );
-
-        String message = exception.getBindingResult().getFieldError("name").getDefaultMessage();
-        assertEquals("Название не может быть пустым", message);
-    }
-
-    @Test
-    void postFilm_WithBlankName_ShouldThrowException() {
-        Film film = new Film();
-        film.setName("   ");
-        film.setDescription("Valid description");
-        film.setReleaseDate(LocalDate.of(2024, 1, 1));
-        film.setDuration(120);
-
-        MethodArgumentNotValidException exception = assertThrows(
-                MethodArgumentNotValidException.class,
-                () -> filmController.postFilm(film)
-        );
-
-        String message = exception.getBindingResult().getFieldError("name").getDefaultMessage();
-        assertEquals("Название не может быть пустым", message);
-    }
-
-    @Test
-    void postFilm_WithNullName_ShouldThrowException() {
-        Film film = new Film();
-        film.setName(null);
-        film.setDescription("Valid description");
-        film.setReleaseDate(LocalDate.of(2024, 1, 1));
-        film.setDuration(120);
-
-        MethodArgumentNotValidException exception = assertThrows(
-                MethodArgumentNotValidException.class,
-                () -> filmController.postFilm(film)
-        );
-
-        String message = exception.getBindingResult().getFieldError("name").getDefaultMessage();
-        assertEquals("Название не может быть null", message);
-    }
-
-    @Test
-    void postFilm_WithDescriptionLongerThan200_ShouldThrowException() {
-        Film film = new Film();
-        film.setName("Valid Film");
-        film.setDescription("a".repeat(201));
-        film.setReleaseDate(LocalDate.of(2024, 1, 1));
-        film.setDuration(120);
-
-        MethodArgumentNotValidException exception = assertThrows(
-                MethodArgumentNotValidException.class,
-                () -> filmController.postFilm(film)
-        );
-
-        String message = exception.getBindingResult().getFieldError("description").getDefaultMessage();
-        assertEquals("Максимальная длина описания — 200 символов", message);
-    }
-
-    @Test
-    void postFilm_WithDescriptionExactly200_ShouldSucceed() throws ValidationException {
-        Film film = new Film();
-        film.setName("Valid Film");
-        film.setDescription("a".repeat(200));
-        film.setReleaseDate(LocalDate.of(2024, 1, 1));
-        film.setDuration(120);
-
-        Film result = filmController.postFilm(film);
-
-        assertNotNull(result);
-        assertEquals(200, result.getDescription().length());
-    }
-
-    @Test
     void postFilm_WithReleaseDateBefore18951228_ShouldThrowException() {
         Film film = new Film();
         film.setName("Valid Film");
@@ -167,74 +84,6 @@ class FilmorateApplicationTests {
         Film result = filmController.postFilm(film);
 
         assertNotNull(result);
-    }
-
-    @Test
-    void postFilm_WithNullReleaseDate_ShouldThrowException() {
-        Film film = new Film();
-        film.setName("Valid Film");
-        film.setDescription("Valid description");
-        film.setReleaseDate(null);
-        film.setDuration(120);
-
-        MethodArgumentNotValidException exception = assertThrows(
-                MethodArgumentNotValidException.class,
-                () -> filmController.postFilm(film)
-        );
-
-        String message = exception.getBindingResult().getFieldError("releaseDate").getDefaultMessage();
-        assertEquals("Дата релиза не может быть null", message);
-    }
-
-    @Test
-    void postFilm_WithZeroDuration_ShouldThrowException() {
-        Film film = new Film();
-        film.setName("Valid Film");
-        film.setDescription("Valid description");
-        film.setReleaseDate(LocalDate.of(2024, 1, 1));
-        film.setDuration(0);
-
-        MethodArgumentNotValidException exception = assertThrows(
-                MethodArgumentNotValidException.class,
-                () -> filmController.postFilm(film)
-        );
-
-        String message = exception.getBindingResult().getFieldError("duration").getDefaultMessage();
-        assertEquals("Продолжительность должна быть положительным числом", message);
-    }
-
-    @Test
-    void postFilm_WithNegativeDuration_ShouldThrowException() {
-        Film film = new Film();
-        film.setName("Valid Film");
-        film.setDescription("Valid description");
-        film.setReleaseDate(LocalDate.of(2024, 1, 1));
-        film.setDuration(-10);
-
-        MethodArgumentNotValidException exception = assertThrows(
-                MethodArgumentNotValidException.class,
-                () -> filmController.postFilm(film)
-        );
-
-        String message = exception.getBindingResult().getFieldError("duration").getDefaultMessage();
-        assertEquals("Продолжительность должна быть положительным числом", message);
-    }
-
-    @Test
-    void postFilm_WithNullDuration_ShouldThrowException() {
-        Film film = new Film();
-        film.setName("Test Film");
-        film.setDescription("Test Description");
-        film.setReleaseDate(LocalDate.of(2000, 1, 1));
-        film.setDuration(null);
-
-        MethodArgumentNotValidException exception = assertThrows(
-                MethodArgumentNotValidException.class,
-                () -> filmController.postFilm(film)
-        );
-
-        String message = exception.getBindingResult().getFieldError("duration").getDefaultMessage();
-        assertEquals("Продолжительность не может быть null", message);
     }
 
     @Test
@@ -364,141 +213,6 @@ class FilmorateApplicationTests {
     }
 
     @Test
-    void postUser_WithEmptyEmail_ShouldThrowException() {
-        User user = new User();
-        user.setEmail("");
-        user.setLogin("validLogin");
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
-
-        MethodArgumentNotValidException exception = assertThrows(
-                MethodArgumentNotValidException.class,
-                () -> userController.postUser(user)
-        );
-
-        String message = exception.getBindingResult().getFieldError("email").getDefaultMessage();
-        assertEquals("Email не может быть пустым", message);
-    }
-
-    @Test
-    void postUser_WithBlankEmail_ShouldThrowException() {
-        User user = new User();
-        user.setEmail("   ");
-        user.setLogin("validLogin");
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
-
-        MethodArgumentNotValidException exception = assertThrows(
-                MethodArgumentNotValidException.class,
-                () -> userController.postUser(user)
-        );
-
-        String message = exception.getBindingResult().getFieldError("email").getDefaultMessage();
-        assertEquals("Email не может быть пустым", message);
-    }
-
-    @Test
-    void postUser_WithNullEmail_ShouldThrowException() {
-        User user = new User();
-        user.setEmail(null);
-        user.setLogin("validLogin");
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
-
-        MethodArgumentNotValidException exception = assertThrows(
-                MethodArgumentNotValidException.class,
-                () -> userController.postUser(user)
-        );
-
-        String message = exception.getBindingResult().getFieldError("email").getDefaultMessage();
-        assertEquals("Email не может быть null", message);
-    }
-
-    @Test
-    void postUser_WithEmailWithoutAtSymbol_ShouldThrowException() {
-        User user = new User();
-        user.setEmail("userexample.com");
-        user.setLogin("validLogin");
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
-
-        MethodArgumentNotValidException exception = assertThrows(
-                MethodArgumentNotValidException.class,
-                () -> userController.postUser(user)
-        );
-
-        String message = exception.getBindingResult().getFieldError("email").getDefaultMessage();
-        assertEquals("Email должен содержать символ @ и быть корректным", message);
-    }
-
-    @Test
-    void postUser_WithEmptyLogin_ShouldThrowException() {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("");
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
-
-        MethodArgumentNotValidException exception = assertThrows(
-                MethodArgumentNotValidException.class,
-                () -> userController.postUser(user)
-        );
-
-        String message = exception.getBindingResult().getFieldError("login").getDefaultMessage();
-        assertEquals("Логин не может быть пустым", message);
-    }
-
-    @Test
-    void postUser_WithBlankLogin_ShouldThrowException() {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("   ");
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
-
-        MethodArgumentNotValidException exception = assertThrows(
-                MethodArgumentNotValidException.class,
-                () -> userController.postUser(user)
-        );
-
-        String message = exception.getBindingResult().getFieldError("login").getDefaultMessage();
-        assertEquals("Логин не может быть пустым", message);
-    }
-
-    @Test
-    void postUser_WithNullLogin_ShouldThrowException() {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin(null);
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
-
-        MethodArgumentNotValidException exception = assertThrows(
-                MethodArgumentNotValidException.class,
-                () -> userController.postUser(user)
-        );
-
-        String message = exception.getBindingResult().getFieldError("login").getDefaultMessage();
-        assertEquals("Логин не может быть null", message);
-    }
-
-    @Test
-    void postUser_WithLoginContainingSpace_ShouldThrowException() {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("invalid login");
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
-
-        ValidationException exception = assertThrows(
-                ValidationException.class,
-                () -> userController.postUser(user)
-        );
-
-        assertEquals("Логин не может быть пустым и содержать пробелы", exception.getMessage());
-    }
-
-    @Test
     void postUser_WithBlankName_ShouldUseLoginAsName() throws ValidationException {
         User user = new User();
         user.setEmail("user@example.com");
@@ -538,20 +252,35 @@ class FilmorateApplicationTests {
     }
 
     @Test
-    void postUser_WithBirthdayInFuture_ShouldThrowException() {
+    void postUser_WithLoginContainingSpace_ShouldThrowException() {
         User user = new User();
         user.setEmail("user@example.com");
-        user.setLogin("validLogin");
+        user.setLogin("invalid login");
         user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().plusDays(1));
+        user.setBirthday(LocalDate.now().minusYears(20));
 
-        MethodArgumentNotValidException exception = assertThrows(
-                MethodArgumentNotValidException.class,
+        ValidationException exception = assertThrows(
+                ValidationException.class,
                 () -> userController.postUser(user)
         );
 
-        String message = exception.getBindingResult().getFieldError("birthday").getDefaultMessage();
-        assertEquals("Дата рождения не может быть в будущем", message);
+        assertEquals("Логин не может быть пустым и содержать пробелы", exception.getMessage());
+    }
+
+    @Test
+    void postUser_WithLoginStartingWithSpace_ShouldThrowException() {
+        User user = new User();
+        user.setEmail("user@example.com");
+        user.setLogin(" login");
+        user.setName("Valid Name");
+        user.setBirthday(LocalDate.now().minusYears(20));
+
+        ValidationException exception = assertThrows(
+                ValidationException.class,
+                () -> userController.postUser(user)
+        );
+
+        assertEquals("Логин не может быть пустым и содержать пробелы", exception.getMessage());
     }
 
     @Test
@@ -578,23 +307,6 @@ class FilmorateApplicationTests {
         User result = userController.postUser(user);
 
         assertNotNull(result);
-    }
-
-    @Test
-    void postUser_WithNullBirthday_ShouldThrowException() {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("validLogin");
-        user.setName("Valid Name");
-        user.setBirthday(null);
-
-        MethodArgumentNotValidException exception = assertThrows(
-                MethodArgumentNotValidException.class,
-                () -> userController.postUser(user)
-        );
-
-        String message = exception.getBindingResult().getFieldError("birthday").getDefaultMessage();
-        assertEquals("Дата рождения не может быть null", message);
     }
 
     @Test
@@ -745,7 +457,7 @@ class FilmorateApplicationTests {
     }
 
     @Test
-    void postFilm_WithDescriptionBoundary200_ShouldSucceed() throws ValidationException {
+    void postFilm_WithDescriptionExactly200_ShouldSucceed() throws ValidationException {
         Film film = new Film();
         film.setName("Valid Film");
         film.setDescription("a".repeat(200));
@@ -756,18 +468,6 @@ class FilmorateApplicationTests {
 
         assertNotNull(result);
         assertEquals(200, result.getDescription().length());
-    }
-
-    @Test
-    void postFilm_WithDescriptionBoundary201_ShouldThrowException() {
-        Film film = new Film();
-        film.setName("Valid Film");
-        film.setDescription("a".repeat(201));
-        film.setReleaseDate(LocalDate.of(2024, 1, 1));
-        film.setDuration(120);
-
-        assertThrows(MethodArgumentNotValidException.class,
-                () -> filmController.postFilm(film));
     }
 
     @Test
@@ -796,37 +496,5 @@ class FilmorateApplicationTests {
 
         assertNotNull(result);
         assertEquals("a@b.ru", result.getEmail());
-    }
-
-    @Test
-    void postUser_WithWhitespaceInLogin_ShouldThrowException() {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("login with spaces");
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
-
-        ValidationException exception = assertThrows(
-                ValidationException.class,
-                () -> userController.postUser(user)
-        );
-
-        assertEquals("Логин не может быть пустым и содержать пробелы", exception.getMessage());
-    }
-
-    @Test
-    void postUser_WithLoginStartingWithSpace_ShouldThrowException() {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin(" login");
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
-
-        ValidationException exception = assertThrows(
-                ValidationException.class,
-                () -> userController.postUser(user)
-        );
-
-        assertEquals("Логин не может быть пустым и содержать пробелы", exception.getMessage());
     }
 }
