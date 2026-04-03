@@ -20,23 +20,17 @@ public class UserController {
 
     @PostMapping
     public User postUser(@Valid @RequestBody User user) throws ValidationException {
-        log.info("Пользователь публикует нового пользователя " + user.toString());
-        if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
-            log.error("электронная почта не может быть пустой и должна содержать символ @");
-            throw new ValidationException("Электронная почта не может быть пустой и должна содержать символ @");
-        }
-        if (user.getLogin() == null || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
-            log.error("Ошибка логин не может быть пустым и содержать пробелы");
+        log.info("Создание пользователя: {}", user);
+        if (user.getLogin().contains(" ")) {
+            log.error("Логин не может содержать пробелы");
             throw new ValidationException("Логин не может быть пустым и содержать пробелы");
         }
-        if (user.getName() == null || user.getName().isBlank())
+        if (user.getName() == null || user.getName().isBlank()) {
             user.setName(user.getLogin());
-        if (user.getBirthday() == null || user.getBirthday().isAfter(LocalDate.now())) {
-            log.error("Ошибка дата рождения не может быть в будущем");
-            throw new ValidationException("Дата рождения не может быть в будущем");
         }
         user.setId(getNextId());
         users.put(user.getId(), user);
+        log.info("Пользователь создан с id={}", user.getId());
         return user;
     }
 
@@ -47,17 +41,23 @@ public class UserController {
             log.error("Ошибка порядкового номера(id) пользователя");
             throw new ValidationException("Id должен быть указан");
         }
+        User oldUser;
         if (users.containsKey(user.getId())) {
-            User oldUser = users.get(user.getId());
+            if (user.getLogin().contains(" ")) {
+                log.error("Логин не может содержать пробелы");
+                throw new ValidationException("Логин не может быть пустым и содержать пробелы");
+            }
+            oldUser = users.get(user.getId());
             oldUser.setEmail(user.getEmail());
             oldUser.setLogin(user.getLogin());
-            oldUser.setName(user.getName());
+            if (user.getName() == null || user.getName().isBlank()) oldUser.setName(oldUser.getLogin());
+            else oldUser.setName(user.getName());
             oldUser.setBirthday(user.getBirthday());
         } else {
-            log.error("Ошибка существования фильма");
+            log.error("Ошибка существования пользователя");
             throw new ValidationException("Пост с id = " + user.getId() + " не найден");
         }
-        return user;
+        return oldUser;
     }
 
     @GetMapping

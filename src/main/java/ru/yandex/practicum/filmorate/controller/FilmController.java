@@ -17,29 +17,18 @@ import java.util.Map;
 public class FilmController {
 
     private final Map<Long, Film> films = new HashMap<>();
+    private static final LocalDate MIN_RELEASE_DATE = LocalDate.of(1895, 12, 28);
 
     @PostMapping
     public Film postFilm(@Valid @RequestBody Film film) throws ValidationException {
         log.info("Пользователь публикует новый фильм " + film.toString());
-        if (film.getName() == null || film.getName().isBlank()) {
-            log.error("Ошибка валидации названия фильма");
-            throw new ValidationException("Название фильма не может быть пустым");
-        }
-        if (film.getDescription() == null || film.getDescription().length() > 200) {
-            log.error("Ошибка валидации описания фильма");
-            throw new ValidationException("Максимальная длина описания — 200 символов");
-        }
-        LocalDate date = LocalDate.of(1895, 12, 28);
-        if (film.getReleaseDate() == null || film.getReleaseDate().isBefore(date)) {
-            log.error("Ошибка валидации релиза фильма");
+        if (film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
+            log.error("Дата релиза {} раньше допустимой", film.getReleaseDate());
             throw new ValidationException("Дата релиза должна быть не раньше 28 декабря 1895 года");
-        }
-        if (film.getDuration() <= 0) {
-            log.error("Ошибка валидации продолжительности фильма");
-            throw new ValidationException("Продолжительность фильма должна быть положительным числом");
         }
         film.setId(getNextId());
         films.put(film.getId(), film);
+        log.info("Фильм создан с id={}", film.getId());
         return film;
     }
 
@@ -50,8 +39,13 @@ public class FilmController {
             log.error("Ошибка валидации порядкового номера(id) фильма");
             throw new ValidationException("Id должен быть указан");
         }
+        Film oldFilm;
         if (films.containsKey(film.getId())) {
-            Film oldFilm = films.get(film.getId());
+            if (film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
+                log.error("Дата релиза {} раньше допустимой", film.getReleaseDate());
+                throw new ValidationException("Дата релиза должна быть не раньше 28 декабря 1895 года");
+            }
+            oldFilm = films.get(film.getId());
             oldFilm.setName(film.getName());
             oldFilm.setDescription(film.getDescription());
             oldFilm.setReleaseDate(film.getReleaseDate());
@@ -60,7 +54,7 @@ public class FilmController {
             log.error("Ошибка - фильм не найден");
             throw new ValidationException("Пост с id = " + film.getId() + " не найден");
         }
-        return film;
+        return oldFilm;
     }
 
     @GetMapping
