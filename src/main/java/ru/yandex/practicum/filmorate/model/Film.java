@@ -7,10 +7,12 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.Set;
 
 @Data
 public class Film {
     private Long id;
+    private Set<Long> idOfUsersWhoLikedThisFilm;
 
     @NotNull(message = "Название не может быть null")
     @NotBlank(message = "Название не может быть пустым")

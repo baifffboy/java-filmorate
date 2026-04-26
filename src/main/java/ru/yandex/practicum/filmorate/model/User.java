@@ -7,10 +7,12 @@ import jakarta.validation.constraints.PastOrPresent;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.Set;
 
 @Data
 public class User {
     private Long id;
+    private Set<Long> friends;
 
     @NotNull(message = "Email не может быть null")
     @NotBlank(message = "Email не может быть пустым")
