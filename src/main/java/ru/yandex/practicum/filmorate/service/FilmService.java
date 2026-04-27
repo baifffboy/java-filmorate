@@ -34,8 +34,8 @@ public class FilmService {
         return filmStorage.addFilm(id, film);
     }
 
-    public Long deleteLikeFromFilmInStorage(Long id) {
-        return filmStorage.deleteLikeFromFilm(id);
+    public Film deleteLikeFromFilmInStorage(Long id, Long whoIsDeleted) {
+        return filmStorage.deleteLikeFromFilm(id, whoIsDeleted);
     }
 
     public Collection<Film> getAllFilmsFromStorage() {
@@ -44,5 +44,9 @@ public class FilmService {
 
     public long getNextIdFromStorage() {
         return filmStorage.getNextId();
+    }
+
+    public Film updateFilmInStorage(Film film) {
+        return filmStorage.updateFilm(film);
     }
 }

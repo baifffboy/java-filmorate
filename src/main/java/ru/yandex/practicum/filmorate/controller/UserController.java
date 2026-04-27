@@ -12,6 +12,7 @@ import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -30,15 +31,16 @@ public class UserController {
 
     @GetMapping("/{id}")
     public User getUserById(@PathVariable Long id) {
-        return userService.getUserByIdFromStorage(id);
+        User user = userService.getUserByIdFromStorage(id);
+        if (user == null)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        return user;
     }
 
     @PutMapping("/{id}/friends/{friendId}")
-    public Set<Long> addFriend(@PathVariable Long id,
-                               @PathVariable Long friendId) {
-        if (!userService.containsKey(id))
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        if (!userService.containsKey(friendId))
+    public Collection<User> addFriend(@PathVariable Long id,
+                                      @PathVariable Long friendId) {
+        if (!userService.containsKey(id) || !userService.containsKey(friendId))
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
 
         User user = userService.getUserByIdFromStorage(id);
@@ -46,32 +48,40 @@ public class UserController {
         user.getFriends().add(friendId);
         friend.getFriends().add(id);
 
-        return Set.of(id, friendId);
+        return List.of(user, friend);
     }
 
     @DeleteMapping("/{id}/friends/{friendId}")
-    public Set<User> deleteFriend(@PathVariable Long id,
-                                  @PathVariable Long friendId) {
-        User deletedFriendFromId;
-        User deletedIdFromFriend;
-        if (userService.containsKey(id) && userService.containsKey(friendId)) {
-            deletedFriendFromId = userService.deleteUserInStorage(userService.getUserByIdFromStorage(id).getId(), userService.getUserByIdFromStorage(friendId).getId());
-            deletedIdFromFriend = userService.deleteUserInStorage(userService.getUserByIdFromStorage(friendId).getId(), userService.getUserByIdFromStorage(id).getId());
-        } else throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        return Set.of(deletedFriendFromId, deletedIdFromFriend);
+    public Collection<User> deleteFriend(@PathVariable Long id,
+                                         @PathVariable Long friendId) {
+
+        if (!userService.containsKey(id) || !userService.containsKey(friendId))
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+
+        User deletedFriendFromId = userService.deleteUserInStorage(userService.getUserByIdFromStorage(id).getId(), userService.getUserByIdFromStorage(friendId).getId());
+        User deletedIdFromFriend = userService.deleteUserInStorage(userService.getUserByIdFromStorage(friendId).getId(), userService.getUserByIdFromStorage(id).getId());
+
+        return List.of(deletedFriendFromId, deletedIdFromFriend);
     }
 
     @GetMapping("/{id}/friends")
-    public Set<Long> getFriends(@PathVariable Long id) {
-        if (userService.containsKey(id)) return userService.getUserByIdFromStorage(id).getFriends();
-        else throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+    public Collection<User> getFriends(@PathVariable Long id) {
+        if (!userService.containsKey(id)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        Set<Long> idOfFriendUsers = userService.getUserByIdFromStorage(id).getFriends();
+        return idOfFriendUsers.stream()
+                .map(userService::getUserByIdFromStorage)
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/{id}/friends/common/{otherId}")
-    public Set<Long> commonFriend(@PathVariable Long id,
-                                  @PathVariable Long otherId) {
+    public Collection<User> commonFriend(@PathVariable Long id,
+                                         @PathVariable Long otherId) {
+        if (!userService.containsKey(id) || !userService.containsKey(otherId))
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+
         return userService.getUserByIdFromStorage(id).getFriends().stream()
                 .filter(userService.getUserByIdFromStorage(otherId).getFriends()::contains)
+                .map(userService::getUserByIdFromStorage)
                 .collect(Collectors.toSet());
     }
 
@@ -94,18 +104,15 @@ public class UserController {
             log.error("Ошибка порядкового номера(id) пользователя");
             throw new ValidationException("Id должен быть указан");
         }
-        User updatedUser;
-        if (userService.containsKey(user.getId())) {
-            if (user.getLogin().contains(" ")) {
-                log.error("Логин не может содержать пробелы");
-                throw new ValidationException("Логин не может быть пустым и содержать пробелы");
-            }
-            updatedUser = userService.updateUserInStorage(user);
-        } else {
+        if (!userService.containsKey(user.getId())) {
             log.error("Ошибка существования пользователя");
-            throw new ValidationException("Пост с id = " + user.getId() + " не найден");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,  "Пост с id = " + user.getId() + " не найден");
         }
-        return updatedUser;
+        if (user.getLogin().contains(" ")) {
+            log.error("Логин не может содержать пробелы");
+            throw new ValidationException("Логин не может быть пустым и содержать пробелы");
+        }
+        return userService.updateUserInStorage(user);
     }
 
     @GetMapping

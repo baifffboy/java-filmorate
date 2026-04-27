@@ -10,6 +10,7 @@ import org.springframework.web.server.ResponseStatusException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
+import ru.yandex.practicum.filmorate.service.UserService;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -23,34 +24,38 @@ public class FilmController {
 
     private static final LocalDate MIN_RELEASE_DATE = LocalDate.of(1895, 12, 28);
     private final FilmService filmService;
+    private final UserService userService;
 
     @Autowired
-    public FilmController(FilmService filmService) {
+    public FilmController(FilmService filmService, UserService userService) {
+        this.userService = userService;
         this.filmService = filmService;
     }
 
     @GetMapping("/{id}")
     public Film getFilmById(@PathVariable Long id) {
-        return filmService.getFilmByIdFromStorage(id);
+        Film film = filmService.getFilmByIdFromStorage(id);
+        if (film == null)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        return film;
     }
 
     @PutMapping("/{id}/like/{userId}")
     public Film likeFilm(@PathVariable Long id,
                          @PathVariable Long userId) {
-        if (filmService.containsKey(id))
-            filmService.getFilmByIdFromStorage(id).getIdOfUsersWhoLikedThisFilm().add(userId);
-        else throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        if (!filmService.containsKey(id) || !userService.containsKey(userId))
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        filmService.getFilmByIdFromStorage(id).getIdOfUsersWhoLikedThisFilm().add(userId);
         return filmService.getFilmByIdFromStorage(id);
     }
 
     @DeleteMapping("/{id}/like/{userId}")
-    public Long dislikeFilm(@PathVariable Long id,
+    public Film dislikeFilm(@PathVariable Long id,
                             @PathVariable Long userId) {
-        Long deleteLikeId;
-        if (filmService.containsKey(id) && filmService.getFilmByIdFromStorage(id).getIdOfUsersWhoLikedThisFilm().contains(userId))
-            deleteLikeId = filmService.deleteLikeFromFilmInStorage(userId);
-        else throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        return deleteLikeId;
+        if (!filmService.containsKey(id) || !filmService.getFilmByIdFromStorage(id).getIdOfUsersWhoLikedThisFilm().contains(userId))
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+
+        return filmService.deleteLikeFromFilmInStorage(id, userId);
     }
 
     @GetMapping("/popular")
@@ -78,22 +83,15 @@ public class FilmController {
             log.error("Ошибка валидации порядкового номера(id) фильма");
             throw new ValidationException("Id должен быть указан");
         }
-        Film oldFilm;
-        if (filmService.containsKey(film.getId())) {
-            if (film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
-                log.error("Дата релиза {} раньше допустимой", film.getReleaseDate());
-                throw new ValidationException("Дата релиза должна быть не раньше 28 декабря 1895 года");
-            }
-            oldFilm = filmService.getFilmByIdFromStorage(film.getId());
-            oldFilm.setName(film.getName());
-            oldFilm.setDescription(film.getDescription());
-            oldFilm.setReleaseDate(film.getReleaseDate());
-            oldFilm.setDuration(film.getDuration());
-        } else {
+        if (!filmService.containsKey(film.getId())) {
             log.error("Ошибка - фильм не найден");
-            throw new ValidationException("Пост с id = " + film.getId() + " не найден");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Пост с id = " + film.getId() + " не найден");
         }
-        return oldFilm;
+        if (film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
+            log.error("Дата релиза {} раньше допустимой", film.getReleaseDate());
+            throw new ValidationException("Дата релиза должна быть не раньше 28 декабря 1895 года");
+        }
+        return filmService.updateFilmInStorage(film);
     }
 
     @GetMapping

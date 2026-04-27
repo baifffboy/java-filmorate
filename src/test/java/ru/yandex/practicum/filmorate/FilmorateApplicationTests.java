@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.web.server.ResponseStatusException;
 import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.controller.UserController;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
@@ -30,7 +31,7 @@ class FilmorateApplicationTests {
     void setUp() {
         filmStorage = new InMemoryFilmStorage();
         userStorage = new InMemoryUserStorage();
-        filmController = new FilmController(new FilmService(filmStorage));
+        filmController = new FilmController(new FilmService(filmStorage), new UserService(userStorage));
         userController = new UserController(new UserService(userStorage));
     }
 
@@ -85,10 +86,9 @@ class FilmorateApplicationTests {
     }
 
     @Test
-    void getFilmById_WithNonExistentId_ShouldReturnNull() {
-        Film result = filmController.getFilmById(999L);
-
-        assertNull(result);
+    void getFilmById_WithNonExistentId_ShouldThrowNotFound() {
+        assertThrows(ResponseStatusException.class,
+                () -> filmController.getFilmById(999L));
     }
 
     @Test
@@ -105,7 +105,6 @@ class FilmorateApplicationTests {
         assertEquals("Updated description", result.getDescription());
         assertEquals(LocalDate.of(2025, 1, 1), result.getReleaseDate());
         assertEquals(150, result.getDuration());
-        // Проверяем, что список лайков сохранился
         assertNotNull(result.getIdOfUsersWhoLikedThisFilm());
     }
 
@@ -114,12 +113,12 @@ class FilmorateApplicationTests {
         Film film = createValidFilm("Test", "Test", LocalDate.now(), 100);
         film.setId(999L);
 
-        ValidationException exception = assertThrows(
-                ValidationException.class,
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
                 () -> filmController.putFilm(film)
         );
 
-        assertEquals("Пост с id = 999 не найден", exception.getMessage());
+        assertEquals("Пост с id = 999 не найден", exception.getReason());
     }
 
     @Test
@@ -169,8 +168,20 @@ class FilmorateApplicationTests {
 
     @Test
     void likeFilm_WithNonExistentFilm_ShouldThrowException() {
-        assertThrows(org.springframework.web.server.ResponseStatusException.class,
-                () -> filmController.likeFilm(999L, 1L));
+        User user = createValidUser("user@test.com", "user1", "User Name", LocalDate.now().minusYears(20));
+        User createdUser = userController.postUser(user);
+
+        assertThrows(ResponseStatusException.class,
+                () -> filmController.likeFilm(999L, createdUser.getId()));
+    }
+
+    @Test
+    void likeFilm_WithNonExistentUser_ShouldThrowException() throws ValidationException {
+        Film film = createValidFilm("Film", "Desc", LocalDate.now(), 100);
+        Film createdFilm = filmController.postFilm(film);
+
+        assertThrows(ResponseStatusException.class,
+                () -> filmController.likeFilm(createdFilm.getId(), 999L));
     }
 
     @Test
@@ -181,11 +192,11 @@ class FilmorateApplicationTests {
         Film createdFilm = filmController.postFilm(film);
         filmController.likeFilm(createdFilm.getId(), createdUser.getId());
 
-        Long result = filmController.dislikeFilm(createdFilm.getId(), createdUser.getId());
+        Film result = filmController.dislikeFilm(createdFilm.getId(), createdUser.getId());
 
         assertNotNull(result);
-        assertFalse(createdFilm.getIdOfUsersWhoLikedThisFilm().contains(createdUser.getId()));
-        assertTrue(createdFilm.getIdOfUsersWhoLikedThisFilm().isEmpty());
+        assertFalse(result.getIdOfUsersWhoLikedThisFilm().contains(createdUser.getId()));
+        assertTrue(result.getIdOfUsersWhoLikedThisFilm().isEmpty());
     }
 
     @Test
@@ -195,7 +206,7 @@ class FilmorateApplicationTests {
         Film film = createValidFilm("Film", "Desc", LocalDate.now(), 100);
         Film createdFilm = filmController.postFilm(film);
 
-        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+        assertThrows(ResponseStatusException.class,
                 () -> filmController.dislikeFilm(createdFilm.getId(), createdUser.getId()));
     }
 
@@ -228,9 +239,9 @@ class FilmorateApplicationTests {
         var popularFilms = filmController.getPopularFilm(10);
 
         assertEquals(3, popularFilms.size());
-        assertEquals(createdFilm2.getId(), popularFilms.get(0).getId()); // Самый популярный первый
-        assertEquals(createdFilm1.getId(), popularFilms.get(1).getId()); // Средний второй
-        assertEquals(createdFilm3.getId(), popularFilms.get(2).getId()); // Непопулярный третий
+        assertEquals(createdFilm2.getId(), popularFilms.get(0).getId());
+        assertEquals(createdFilm1.getId(), popularFilms.get(1).getId());
+        assertEquals(createdFilm3.getId(), popularFilms.get(2).getId());
     }
 
     @Test
@@ -304,10 +315,9 @@ class FilmorateApplicationTests {
     }
 
     @Test
-    void getUserById_WithNonExistentId_ShouldReturnNull() {
-        User result = userController.getUserById(999L);
-
-        assertNull(result);
+    void getUserById_WithNonExistentId_ShouldThrowNotFound() {
+        assertThrows(ResponseStatusException.class,
+                () -> userController.getUserById(999L));
     }
 
     @Test
@@ -324,7 +334,6 @@ class FilmorateApplicationTests {
         assertEquals("updatedLogin", result.getLogin());
         assertEquals("Updated Name", result.getName());
         assertEquals(LocalDate.now().minusYears(25), result.getBirthday());
-        // Проверяем, что список друзей сохранился
         assertNotNull(result.getFriends());
     }
 
@@ -346,12 +355,12 @@ class FilmorateApplicationTests {
         User user = createValidUser("test@test.com", "test", "Test", LocalDate.now());
         user.setId(999L);
 
-        ValidationException exception = assertThrows(
-                ValidationException.class,
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
                 () -> userController.putUser(user)
         );
 
-        assertEquals("Пост с id = 999 не найден", exception.getMessage());
+        assertEquals("Пост с id = 999 не найден", exception.getReason());
     }
 
     @Test
@@ -375,8 +384,9 @@ class FilmorateApplicationTests {
 
         var result = userController.addFriend(createdUser1.getId(), createdUser2.getId());
 
-        assertTrue(result.contains(createdUser1.getId()));
-        assertTrue(result.contains(createdUser2.getId()));
+        assertEquals(2, result.size());
+        assertTrue(result.stream().anyMatch(u -> u.getId().equals(createdUser1.getId())));
+        assertTrue(result.stream().anyMatch(u -> u.getId().equals(createdUser2.getId())));
 
         // Проверяем, что дружба взаимная
         assertTrue(createdUser1.getFriends().contains(createdUser2.getId()));
@@ -388,7 +398,7 @@ class FilmorateApplicationTests {
         User user1 = createValidUser("user1@test.com", "user1", "User1", LocalDate.now().minusYears(20));
         User createdUser1 = userController.postUser(user1);
 
-        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+        assertThrows(ResponseStatusException.class,
                 () -> userController.addFriend(createdUser1.getId(), 999L));
     }
 
@@ -403,7 +413,6 @@ class FilmorateApplicationTests {
         var result = userController.deleteFriend(createdUser1.getId(), createdUser2.getId());
 
         assertNotNull(result);
-        // Проверяем, что дружба удалена
         assertFalse(createdUser1.getFriends().contains(createdUser2.getId()));
         assertFalse(createdUser2.getFriends().contains(createdUser1.getId()));
     }
@@ -419,7 +428,7 @@ class FilmorateApplicationTests {
         var friends = userController.getFriends(createdUser1.getId());
 
         assertEquals(1, friends.size());
-        assertTrue(friends.contains(createdUser2.getId()));
+        assertTrue(friends.stream().anyMatch(u -> u.getId().equals(createdUser2.getId())));
     }
 
     @Test
@@ -448,7 +457,7 @@ class FilmorateApplicationTests {
         var commonFriends = userController.commonFriend(createdUser1.getId(), createdUser2.getId());
 
         assertEquals(1, commonFriends.size());
-        assertTrue(commonFriends.contains(createdCommon.getId()));
+        assertTrue(commonFriends.stream().anyMatch(u -> u.getId().equals(createdCommon.getId())));
     }
 
     @Test
