@@ -11,7 +11,7 @@ import java.util.List;
 @Service
 public class FilmService {
 
-    private FilmStorage filmStorage;
+    private final FilmStorage filmStorage;
 
     @Autowired
     public FilmService(FilmStorage filmStorage) {
@@ -30,12 +30,12 @@ public class FilmService {
         return filmStorage.getPopularFilmLimitCount(count);
     }
 
-    public Long addFilmInStorage(Long id, Film film) {
+    public Film addFilmInStorage(Long id, Film film) {
         return filmStorage.addFilm(id, film);
     }
 
-    public Long deleteFilmInStorage(Long id) {
-        return filmStorage.deleteFilm(id);
+    public Long deleteLikeFromFilmInStorage(Long id) {
+        return filmStorage.deleteLikeFromFilm(id);
     }
 
     public Collection<Film> getAllFilmsFromStorage() {

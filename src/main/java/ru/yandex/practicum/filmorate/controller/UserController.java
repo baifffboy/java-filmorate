@@ -36,23 +36,29 @@ public class UserController {
     @PutMapping("/{id}/friends/{friendId}")
     public Set<Long> addFriend(@PathVariable Long id,
                                @PathVariable Long friendId) {
-        if (userService.containsKey(id))
-            userService.getUserByIdFromStorage(id).getFriends().add(userService.getUserByIdFromStorage(friendId).getId());
-        else throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        if (userService.containsKey(friendId))
-            userService.getUserByIdFromStorage(friendId).getFriends().add(userService.getUserByIdFromStorage(id).getId());
-        else throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        if (!userService.containsKey(id))
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        if (!userService.containsKey(friendId))
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+
+        User user = userService.getUserByIdFromStorage(id);
+        User friend = userService.getUserByIdFromStorage(friendId);
+        user.getFriends().add(friendId);
+        friend.getFriends().add(id);
+
         return Set.of(id, friendId);
     }
 
     @DeleteMapping("/{id}/friends/{friendId}")
-    public Set<Long> deleteFriend(@PathVariable Long id,
+    public Set<User> deleteFriend(@PathVariable Long id,
                                   @PathVariable Long friendId) {
+        User deletedFriendFromId;
+        User deletedIdFromFriend;
         if (userService.containsKey(id) && userService.containsKey(friendId)) {
-            userService.deleteUserInStorage(userService.getUserByIdFromStorage(id).getId(), userService.getUserByIdFromStorage(friendId).getId());
-            userService.deleteUserInStorage(userService.getUserByIdFromStorage(friendId).getId(), userService.getUserByIdFromStorage(id).getId());
+            deletedFriendFromId = userService.deleteUserInStorage(userService.getUserByIdFromStorage(id).getId(), userService.getUserByIdFromStorage(friendId).getId());
+            deletedIdFromFriend = userService.deleteUserInStorage(userService.getUserByIdFromStorage(friendId).getId(), userService.getUserByIdFromStorage(id).getId());
         } else throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        return Set.of(id, friendId);
+        return Set.of(deletedFriendFromId, deletedIdFromFriend);
     }
 
     @GetMapping("/{id}/friends")
@@ -76,13 +82,9 @@ public class UserController {
             log.error("Логин не может содержать пробелы");
             throw new ValidationException("Логин не может быть пустым и содержать пробелы");
         }
-        if (user.getName() == null || user.getName().isBlank()) {
-            user.setName(user.getLogin());
-        }
-        user.setId(userService.getNextIdFromStorage());
-        userService.addUserInStorage(user.getId(), user);
-        log.info("Пользователь создан с id={}", user.getId());
-        return user;
+        User postUser = userService.addUserInStorage(user);
+        log.info("Пользователь создан с id={}", postUser.getId());
+        return postUser;
     }
 
     @PutMapping
@@ -92,23 +94,18 @@ public class UserController {
             log.error("Ошибка порядкового номера(id) пользователя");
             throw new ValidationException("Id должен быть указан");
         }
-        User oldUser;
+        User updatedUser;
         if (userService.containsKey(user.getId())) {
             if (user.getLogin().contains(" ")) {
                 log.error("Логин не может содержать пробелы");
                 throw new ValidationException("Логин не может быть пустым и содержать пробелы");
             }
-            oldUser = userService.getUserByIdFromStorage(user.getId());
-            oldUser.setEmail(user.getEmail());
-            oldUser.setLogin(user.getLogin());
-            if (user.getName() == null || user.getName().isBlank()) oldUser.setName(oldUser.getLogin());
-            else oldUser.setName(user.getName());
-            oldUser.setBirthday(user.getBirthday());
+            updatedUser = userService.updateUserInStorage(user);
         } else {
             log.error("Ошибка существования пользователя");
             throw new ValidationException("Пост с id = " + user.getId() + " не найден");
         }
-        return oldUser;
+        return updatedUser;
     }
 
     @GetMapping

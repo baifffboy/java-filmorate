@@ -4,6 +4,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.model.Film;
@@ -18,18 +19,25 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ValidationTest {
 
     private Validator validator;
+    private ValidatorFactory factory;
 
     @BeforeEach
     void setUp() {
-        try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
-            validator = factory.getValidator();
+        factory = Validation.buildDefaultValidatorFactory();
+        validator = factory.getValidator();
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (factory != null) {
+            factory.close();
         }
     }
 
     // ==================== ТЕСТЫ ДЛЯ FILM ====================
 
     @Test
-    void postFilm_WithEmptyName_ShouldHaveValidationError() {
+    void film_WithEmptyName_ShouldHaveValidationError() {
         Film film = new Film();
         film.setName("");
         film.setDescription("Valid description");
@@ -45,7 +53,7 @@ class ValidationTest {
     }
 
     @Test
-    void postFilm_WithBlankName_ShouldHaveValidationError() {
+    void film_WithBlankName_ShouldHaveValidationError() {
         Film film = new Film();
         film.setName("   ");
         film.setDescription("Valid description");
@@ -58,7 +66,7 @@ class ValidationTest {
     }
 
     @Test
-    void postFilm_WithNullName_ShouldHaveValidationError() {
+    void film_WithNullName_ShouldHaveValidationError() {
         Film film = new Film();
         film.setName(null);
         film.setDescription("Valid description");
@@ -71,7 +79,7 @@ class ValidationTest {
     }
 
     @Test
-    void postFilm_WithDescriptionLongerThan200_ShouldHaveValidationError() {
+    void film_WithDescriptionLongerThan200_ShouldHaveValidationError() {
         Film film = new Film();
         film.setName("Valid Film");
         film.setDescription("a".repeat(201));
@@ -81,10 +89,13 @@ class ValidationTest {
         Set<ConstraintViolation<Film>> violations = validator.validate(film);
 
         assertFalse(violations.isEmpty());
+        boolean hasDescriptionError = violations.stream()
+                .anyMatch(v -> v.getPropertyPath().toString().equals("description"));
+        assertTrue(hasDescriptionError);
     }
 
     @Test
-    void postFilm_WithDescriptionExactly200_ShouldHaveNoValidationError() {
+    void film_WithDescriptionExactly200_ShouldHaveNoValidationError() {
         Film film = new Film();
         film.setName("Valid Film");
         film.setDescription("a".repeat(200));
@@ -98,7 +109,7 @@ class ValidationTest {
     }
 
     @Test
-    void postFilm_WithNullReleaseDate_ShouldHaveValidationError() {
+    void film_WithNullReleaseDate_ShouldHaveValidationError() {
         Film film = new Film();
         film.setName("Valid Film");
         film.setDescription("Valid description");
@@ -111,7 +122,7 @@ class ValidationTest {
     }
 
     @Test
-    void postFilm_WithZeroDuration_ShouldHaveValidationError() {
+    void film_WithZeroDuration_ShouldHaveValidationError() {
         Film film = new Film();
         film.setName("Valid Film");
         film.setDescription("Valid description");
@@ -124,7 +135,7 @@ class ValidationTest {
     }
 
     @Test
-    void postFilm_WithNegativeDuration_ShouldHaveValidationError() {
+    void film_WithNegativeDuration_ShouldHaveValidationError() {
         Film film = new Film();
         film.setName("Valid Film");
         film.setDescription("Valid description");
@@ -137,7 +148,7 @@ class ValidationTest {
     }
 
     @Test
-    void postFilm_WithNullDuration_ShouldHaveValidationError() {
+    void film_WithNullDuration_ShouldHaveValidationError() {
         Film film = new Film();
         film.setName("Valid Film");
         film.setDescription("Valid description");
@@ -149,10 +160,23 @@ class ValidationTest {
         assertFalse(violations.isEmpty());
     }
 
+    @Test
+    void film_WithValidFilm_ShouldHaveNoValidationError() {
+        Film film = new Film();
+        film.setName("Valid Film");
+        film.setDescription("Valid description");
+        film.setReleaseDate(LocalDate.of(2024, 1, 1));
+        film.setDuration(120);
+
+        Set<ConstraintViolation<Film>> violations = validator.validate(film);
+
+        assertTrue(violations.isEmpty());
+    }
+
     // ==================== ТЕСТЫ ДЛЯ USER ====================
 
     @Test
-    void postUser_WithEmptyEmail_ShouldHaveValidationError() {
+    void user_WithEmptyEmail_ShouldHaveValidationError() {
         User user = new User();
         user.setEmail("");
         user.setLogin("validLogin");
@@ -165,7 +189,7 @@ class ValidationTest {
     }
 
     @Test
-    void postUser_WithBlankEmail_ShouldHaveValidationError() {
+    void user_WithBlankEmail_ShouldHaveValidationError() {
         User user = new User();
         user.setEmail("   ");
         user.setLogin("validLogin");
@@ -178,7 +202,7 @@ class ValidationTest {
     }
 
     @Test
-    void postUser_WithNullEmail_ShouldHaveValidationError() {
+    void user_WithNullEmail_ShouldHaveValidationError() {
         User user = new User();
         user.setEmail(null);
         user.setLogin("validLogin");
@@ -191,7 +215,7 @@ class ValidationTest {
     }
 
     @Test
-    void postUser_WithEmailWithoutAtSymbol_ShouldHaveValidationError() {
+    void user_WithEmailWithoutAtSymbol_ShouldHaveValidationError() {
         User user = new User();
         user.setEmail("userexample.com");
         user.setLogin("validLogin");
@@ -204,7 +228,20 @@ class ValidationTest {
     }
 
     @Test
-    void postUser_WithEmptyLogin_ShouldHaveValidationError() {
+    void user_WithEmailWithoutDomain_ShouldHaveValidationError() {
+        User user = new User();
+        user.setEmail("user@");
+        user.setLogin("validLogin");
+        user.setName("Valid Name");
+        user.setBirthday(LocalDate.now().minusYears(20));
+
+        Set<ConstraintViolation<User>> violations = validator.validate(user);
+
+        assertFalse(violations.isEmpty());
+    }
+
+    @Test
+    void user_WithEmptyLogin_ShouldHaveValidationError() {
         User user = new User();
         user.setEmail("user@example.com");
         user.setLogin("");
@@ -217,7 +254,7 @@ class ValidationTest {
     }
 
     @Test
-    void postUser_WithBlankLogin_ShouldHaveValidationError() {
+    void user_WithBlankLogin_ShouldHaveValidationError() {
         User user = new User();
         user.setEmail("user@example.com");
         user.setLogin("   ");
@@ -230,7 +267,7 @@ class ValidationTest {
     }
 
     @Test
-    void postUser_WithNullLogin_ShouldHaveValidationError() {
+    void user_WithNullLogin_ShouldHaveValidationError() {
         User user = new User();
         user.setEmail("user@example.com");
         user.setLogin(null);
@@ -243,7 +280,7 @@ class ValidationTest {
     }
 
     @Test
-    void postUser_WithBirthdayInFuture_ShouldHaveValidationError() {
+    void user_WithBirthdayInFuture_ShouldHaveValidationError() {
         User user = new User();
         user.setEmail("user@example.com");
         user.setLogin("validLogin");
@@ -253,10 +290,13 @@ class ValidationTest {
         Set<ConstraintViolation<User>> violations = validator.validate(user);
 
         assertFalse(violations.isEmpty());
+        boolean hasBirthdayError = violations.stream()
+                .anyMatch(v -> v.getPropertyPath().toString().equals("birthday"));
+        assertTrue(hasBirthdayError);
     }
 
     @Test
-    void postUser_WithNullBirthday_ShouldHaveValidationError() {
+    void user_WithNullBirthday_ShouldHaveValidationError() {
         User user = new User();
         user.setEmail("user@example.com");
         user.setLogin("validLogin");
@@ -269,7 +309,20 @@ class ValidationTest {
     }
 
     @Test
-    void postUser_WithValidUser_ShouldHaveNoValidationError() {
+    void user_WithBirthdayToday_ShouldHaveNoValidationError() {
+        User user = new User();
+        user.setEmail("user@example.com");
+        user.setLogin("validLogin");
+        user.setName("Valid Name");
+        user.setBirthday(LocalDate.now());
+
+        Set<ConstraintViolation<User>> violations = validator.validate(user);
+
+        assertTrue(violations.isEmpty());
+    }
+
+    @Test
+    void user_WithBirthdayInPast_ShouldHaveNoValidationError() {
         User user = new User();
         user.setEmail("user@example.com");
         user.setLogin("validLogin");
@@ -279,5 +332,33 @@ class ValidationTest {
         Set<ConstraintViolation<User>> violations = validator.validate(user);
 
         assertTrue(violations.isEmpty());
+    }
+
+    @Test
+    void user_WithValidUser_ShouldHaveNoValidationError() {
+        User user = new User();
+        user.setEmail("user@example.com");
+        user.setLogin("validLogin");
+        user.setName("Valid Name");
+        user.setBirthday(LocalDate.now().minusYears(20));
+
+        Set<ConstraintViolation<User>> violations = validator.validate(user);
+
+        assertTrue(violations.isEmpty());
+    }
+
+    @Test
+    void user_WithNameNull_ShouldPassValidation() {
+        User user = new User();
+        user.setEmail("user@example.com");
+        user.setLogin("validLogin");
+        user.setName(null);
+        user.setBirthday(LocalDate.now().minusYears(20));
+
+        Set<ConstraintViolation<User>> violations = validator.validate(user);
+
+        // Поле name не имеет валидационных аннотаций, поэтому ошибок быть не должно
+        assertTrue(violations.stream()
+                .noneMatch(v -> v.getPropertyPath().toString().equals("name")));
     }
 }

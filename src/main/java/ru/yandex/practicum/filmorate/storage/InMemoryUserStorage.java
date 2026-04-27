@@ -6,6 +6,7 @@ import ru.yandex.practicum.filmorate.model.User;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Component
 public class InMemoryUserStorage implements UserStorage {
@@ -37,14 +38,29 @@ public class InMemoryUserStorage implements UserStorage {
     }
 
     @Override
-    public Long addUser(Long id, User user) {
+    public User addUser(Long id, User user) {
+        if (user.getName() == null || user.getName().isBlank()) {
+            user.setName(user.getLogin());
+        }
         users.put(id, user);
-        return id;
+        return users.get(id);
     }
 
     @Override
-    public Long deleteUser(Long id, Long whoIsDeleted) {
+    public User deleteUser(Long id, Long whoIsDeleted) {
+        User deletedUser = users.get(id);
         users.get(id).getFriends().remove(whoIsDeleted);
-        return id;
+        return deletedUser;
+    }
+
+    @Override
+    public User updateUser(User user) {
+        User existingUser = users.get(user.getId());
+        if (existingUser == null) return null;
+        Set<Long> existingFriends = existingUser.getFriends();
+        user.setFriends(existingFriends);
+        if (user.getName() == null || user.getName().isBlank()) user.setName(user.getLogin());
+        users.put(user.getId(), user);
+        return user;
     }
 }

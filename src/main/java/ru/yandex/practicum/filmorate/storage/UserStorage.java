@@ -13,7 +13,9 @@ public interface UserStorage {
 
     Collection<User> getAllValues();
 
-    Long addUser(Long id, User user);
+    User addUser(Long id, User user);
 
-    Long deleteUser(Long id, Long whoIsDeleted);
+    User deleteUser(Long id, Long whoIsDeleted);
+
+    User updateUser(User user);
 }

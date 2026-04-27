@@ -44,12 +44,13 @@ public class FilmController {
     }
 
     @DeleteMapping("/{id}/like/{userId}")
-    public Film dislikeFilm(@PathVariable Long id,
+    public Long dislikeFilm(@PathVariable Long id,
                             @PathVariable Long userId) {
+        Long deleteLikeId;
         if (filmService.containsKey(id) && filmService.getFilmByIdFromStorage(id).getIdOfUsersWhoLikedThisFilm().contains(userId))
-            filmService.deleteFilmInStorage(userId);
+            deleteLikeId = filmService.deleteLikeFromFilmInStorage(userId);
         else throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        return filmService.getFilmByIdFromStorage(id);
+        return deleteLikeId;
     }
 
     @GetMapping("/popular")
@@ -65,9 +66,9 @@ public class FilmController {
             throw new ValidationException("Дата релиза должна быть не раньше 28 декабря 1895 года");
         }
         film.setId(getNextId());
-        filmService.addFilmInStorage(film.getId(), film);
+        Film postFilm = filmService.addFilmInStorage(film.getId(), film);
         log.info("Фильм создан с id={}", film.getId());
-        return film;
+        return postFilm;
     }
 
     @PutMapping

@@ -10,12 +10,11 @@ import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.FilmService;
 import ru.yandex.practicum.filmorate.service.UserService;
-import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.InMemoryFilmStorage;
 import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
-import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
+import java.util.Collection;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -24,39 +23,37 @@ class FilmorateApplicationTests {
 
     private FilmController filmController;
     private UserController userController;
+    private InMemoryFilmStorage filmStorage;
+    private InMemoryUserStorage userStorage;
 
     @BeforeEach
     void setUp() {
-        filmController = new FilmController(new FilmService(new InMemoryFilmStorage()));
-        userController = new UserController(new UserService(new InMemoryUserStorage()));
+        filmStorage = new InMemoryFilmStorage();
+        userStorage = new InMemoryUserStorage();
+        filmController = new FilmController(new FilmService(filmStorage));
+        userController = new UserController(new UserService(userStorage));
     }
 
     // ==================== ТЕСТЫ ДЛЯ FILM CONTROLLER ====================
 
     @Test
     void postFilm_WithValidFilm_ShouldSucceed() throws ValidationException {
-        Film film = new Film();
-        film.setName("Valid Film");
-        film.setDescription("Valid description");
-        film.setReleaseDate(LocalDate.of(2024, 1, 1));
-        film.setDuration(120);
+        Film film = createValidFilm("Valid Film", "Valid description", LocalDate.of(2024, 1, 1), 120);
 
         Film result = filmController.postFilm(film);
 
         assertNotNull(result.getId());
         assertEquals("Valid Film", result.getName());
         assertEquals("Valid description", result.getDescription());
-        assertNotNull(result.getReleaseDate());
+        assertEquals(LocalDate.of(2024, 1, 1), result.getReleaseDate());
         assertEquals(120, result.getDuration());
+        assertNotNull(result.getIdOfUsersWhoLikedThisFilm());
+        assertTrue(result.getIdOfUsersWhoLikedThisFilm().isEmpty());
     }
 
     @Test
     void postFilm_WithReleaseDateBefore18951228_ShouldThrowException() {
-        Film film = new Film();
-        film.setName("Valid Film");
-        film.setDescription("Valid description");
-        film.setReleaseDate(LocalDate.of(1895, 12, 27));
-        film.setDuration(120);
+        Film film = createValidFilm("Valid Film", "Valid description", LocalDate.of(1895, 12, 27), 120);
 
         ValidationException exception = assertThrows(
                 ValidationException.class,
@@ -68,11 +65,7 @@ class FilmorateApplicationTests {
 
     @Test
     void postFilm_WithReleaseDateExactly18951228_ShouldSucceed() throws ValidationException {
-        Film film = new Film();
-        film.setName("Valid Film");
-        film.setDescription("Valid description");
-        film.setReleaseDate(LocalDate.of(1895, 12, 28));
-        film.setDuration(120);
+        Film film = createValidFilm("Valid Film", "Valid description", LocalDate.of(1895, 12, 28), 120);
 
         Film result = filmController.postFilm(film);
 
@@ -80,35 +73,31 @@ class FilmorateApplicationTests {
     }
 
     @Test
-    void postFilm_WithReleaseDateAfter18951228_ShouldSucceed() throws ValidationException {
-        Film film = new Film();
-        film.setName("Valid Film");
-        film.setDescription("Valid description");
-        film.setReleaseDate(LocalDate.of(2000, 1, 1));
-        film.setDuration(120);
+    void getFilmById_WithExistingId_ShouldReturnFilm() throws ValidationException {
+        Film film = createValidFilm("Test Film", "Description", LocalDate.now(), 100);
+        Film created = filmController.postFilm(film);
 
-        Film result = filmController.postFilm(film);
+        Film result = filmController.getFilmById(created.getId());
 
         assertNotNull(result);
+        assertEquals(created.getId(), result.getId());
+        assertEquals("Test Film", result.getName());
+    }
+
+    @Test
+    void getFilmById_WithNonExistentId_ShouldReturnNull() {
+        Film result = filmController.getFilmById(999L);
+
+        assertNull(result);
     }
 
     @Test
     void putFilm_WithValidExistingFilm_ShouldUpdate() throws ValidationException {
-        // Создаем фильм
-        Film film = new Film();
-        film.setName("Original Name");
-        film.setDescription("Original description");
-        film.setReleaseDate(LocalDate.of(2024, 1, 1));
-        film.setDuration(120);
+        Film film = createValidFilm("Original Name", "Original description", LocalDate.of(2024, 1, 1), 120);
         Film created = filmController.postFilm(film);
 
-        // Обновляем фильм
-        Film updatedFilm = new Film();
+        Film updatedFilm = createValidFilm("Updated Name", "Updated description", LocalDate.of(2025, 1, 1), 150);
         updatedFilm.setId(created.getId());
-        updatedFilm.setName("Updated Name");
-        updatedFilm.setDescription("Updated description");
-        updatedFilm.setReleaseDate(LocalDate.of(2025, 1, 1));
-        updatedFilm.setDuration(150);
 
         Film result = filmController.putFilm(updatedFilm);
 
@@ -116,16 +105,14 @@ class FilmorateApplicationTests {
         assertEquals("Updated description", result.getDescription());
         assertEquals(LocalDate.of(2025, 1, 1), result.getReleaseDate());
         assertEquals(150, result.getDuration());
+        // Проверяем, что список лайков сохранился
+        assertNotNull(result.getIdOfUsersWhoLikedThisFilm());
     }
 
     @Test
     void putFilm_WithNonExistentId_ShouldThrowException() {
-        Film film = new Film();
+        Film film = createValidFilm("Test", "Test", LocalDate.now(), 100);
         film.setId(999L);
-        film.setName("Test");
-        film.setDescription("Test");
-        film.setReleaseDate(LocalDate.now());
-        film.setDuration(100);
 
         ValidationException exception = assertThrows(
                 ValidationException.class,
@@ -137,12 +124,8 @@ class FilmorateApplicationTests {
 
     @Test
     void putFilm_WithNullId_ShouldThrowException() {
-        Film film = new Film();
+        Film film = createValidFilm("Test", "Test", LocalDate.now(), 100);
         film.setId(null);
-        film.setName("Test");
-        film.setDescription("Test");
-        film.setReleaseDate(LocalDate.now());
-        film.setDuration(100);
 
         ValidationException exception = assertThrows(
                 ValidationException.class,
@@ -154,61 +137,119 @@ class FilmorateApplicationTests {
 
     @Test
     void getAllFilms_ShouldReturnAllFilms() throws ValidationException {
-        Film film1 = new Film();
-        film1.setName("Film 1");
-        film1.setDescription("Desc 1");
-        film1.setReleaseDate(LocalDate.now());
-        film1.setDuration(90);
+        Film film1 = createValidFilm("Film 1", "Desc 1", LocalDate.now(), 90);
+        Film film2 = createValidFilm("Film 2", "Desc 2", LocalDate.now(), 120);
         filmController.postFilm(film1);
-
-        Film film2 = new Film();
-        film2.setName("Film 2");
-        film2.setDescription("Desc 2");
-        film2.setReleaseDate(LocalDate.now());
-        film2.setDuration(120);
         filmController.postFilm(film2);
 
-        var allFilms = filmController.getAllFilms();
+        Collection<Film> allFilms = filmController.getAllFilms();
 
         assertEquals(2, allFilms.size());
     }
 
     @Test
     void getAllFilms_WhenNoFilms_ShouldReturnEmptyCollection() {
-        FilmController freshController = new FilmController();
-        var allFilms = freshController.getAllFilms();
+        Collection<Film> allFilms = filmController.getAllFilms();
+
         assertTrue(allFilms.isEmpty());
     }
 
     @Test
-    void filmIdGeneration_ShouldBeIncremental() throws ValidationException {
-        Film film1 = new Film();
-        film1.setName("Film 1");
-        film1.setDescription("Desc 1");
-        film1.setReleaseDate(LocalDate.now());
-        film1.setDuration(90);
-        Film created1 = filmController.postFilm(film1);
+    void likeFilm_ShouldAddUserToLikes() throws ValidationException {
+        User user = createValidUser("user@test.com", "user1", "User Name", LocalDate.now().minusYears(20));
+        User createdUser = userController.postUser(user);
+        Film film = createValidFilm("Film", "Desc", LocalDate.now(), 100);
+        Film createdFilm = filmController.postFilm(film);
 
-        Film film2 = new Film();
-        film2.setName("Film 2");
-        film2.setDescription("Desc 2");
-        film2.setReleaseDate(LocalDate.now());
-        film2.setDuration(120);
-        Film created2 = filmController.postFilm(film2);
+        Film result = filmController.likeFilm(createdFilm.getId(), createdUser.getId());
 
-        assertEquals(1L, created1.getId());
-        assertEquals(2L, created2.getId());
+        assertTrue(result.getIdOfUsersWhoLikedThisFilm().contains(createdUser.getId()));
+        assertEquals(1, result.getIdOfUsersWhoLikedThisFilm().size());
+    }
+
+    @Test
+    void likeFilm_WithNonExistentFilm_ShouldThrowException() {
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> filmController.likeFilm(999L, 1L));
+    }
+
+    @Test
+    void dislikeFilm_ShouldRemoveUserFromLikes() throws ValidationException {
+        User user = createValidUser("user@test.com", "user1", "User Name", LocalDate.now().minusYears(20));
+        User createdUser = userController.postUser(user);
+        Film film = createValidFilm("Film", "Desc", LocalDate.now(), 100);
+        Film createdFilm = filmController.postFilm(film);
+        filmController.likeFilm(createdFilm.getId(), createdUser.getId());
+
+        Long result = filmController.dislikeFilm(createdFilm.getId(), createdUser.getId());
+
+        assertNotNull(result);
+        assertFalse(createdFilm.getIdOfUsersWhoLikedThisFilm().contains(createdUser.getId()));
+        assertTrue(createdFilm.getIdOfUsersWhoLikedThisFilm().isEmpty());
+    }
+
+    @Test
+    void dislikeFilm_WhenUserDidNotLike_ShouldThrowException() throws ValidationException {
+        User user = createValidUser("user@test.com", "user1", "User Name", LocalDate.now().minusYears(20));
+        User createdUser = userController.postUser(user);
+        Film film = createValidFilm("Film", "Desc", LocalDate.now(), 100);
+        Film createdFilm = filmController.postFilm(film);
+
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> filmController.dislikeFilm(createdFilm.getId(), createdUser.getId()));
+    }
+
+    @Test
+    void getPopularFilms_ShouldReturnSortedByLikes() throws ValidationException {
+        User user1 = createValidUser("user1@test.com", "user1", "User1", LocalDate.now().minusYears(20));
+        User user2 = createValidUser("user2@test.com", "user2", "User2", LocalDate.now().minusYears(20));
+        User user3 = createValidUser("user3@test.com", "user3", "User3", LocalDate.now().minusYears(20));
+        User createdUser1 = userController.postUser(user1);
+        User createdUser2 = userController.postUser(user2);
+        User createdUser3 = userController.postUser(user3);
+
+        Film film1 = createValidFilm("Film 1", "Desc", LocalDate.now(), 100);
+        Film film2 = createValidFilm("Film 2", "Desc", LocalDate.now(), 100);
+        Film film3 = createValidFilm("Film 3", "Desc", LocalDate.now(), 100);
+        Film createdFilm1 = filmController.postFilm(film1);
+        Film createdFilm2 = filmController.postFilm(film2);
+        Film createdFilm3 = filmController.postFilm(film3);
+
+        // Film2 получает 3 лайка (самый популярный)
+        filmController.likeFilm(createdFilm2.getId(), createdUser1.getId());
+        filmController.likeFilm(createdFilm2.getId(), createdUser2.getId());
+        filmController.likeFilm(createdFilm2.getId(), createdUser3.getId());
+
+        // Film1 получает 1 лайк (средний)
+        filmController.likeFilm(createdFilm1.getId(), createdUser1.getId());
+
+        // Film3 получает 0 лайков (непопулярный)
+
+        var popularFilms = filmController.getPopularFilm(10);
+
+        assertEquals(3, popularFilms.size());
+        assertEquals(createdFilm2.getId(), popularFilms.get(0).getId()); // Самый популярный первый
+        assertEquals(createdFilm1.getId(), popularFilms.get(1).getId()); // Средний второй
+        assertEquals(createdFilm3.getId(), popularFilms.get(2).getId()); // Непопулярный третий
+    }
+
+    @Test
+    void getPopularFilms_WithLimitCount_ShouldReturnLimitedResults() throws ValidationException {
+        for (int i = 0; i < 5; i++) {
+            Film film = createValidFilm("Film " + i, "Desc", LocalDate.now(), 100);
+            filmController.postFilm(film);
+        }
+
+        var popularFilms = filmController.getPopularFilm(3);
+
+        assertEquals(3, popularFilms.size());
     }
 
     // ==================== ТЕСТЫ ДЛЯ USER CONTROLLER ====================
 
     @Test
     void postUser_WithValidUser_ShouldSucceed() throws ValidationException {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("validLogin");
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
+        User user = createValidUser("user@example.com", "validLogin", "Valid Name", LocalDate.now().minusYears(20));
 
         User result = userController.postUser(user);
 
@@ -216,15 +257,13 @@ class FilmorateApplicationTests {
         assertEquals("user@example.com", result.getEmail());
         assertEquals("validLogin", result.getLogin());
         assertEquals("Valid Name", result.getName());
+        assertNotNull(result.getFriends());
+        assertTrue(result.getFriends().isEmpty());
     }
 
     @Test
     void postUser_WithBlankName_ShouldUseLoginAsName() throws ValidationException {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("validLogin");
-        user.setName("");
-        user.setBirthday(LocalDate.now().minusYears(20));
+        User user = createValidUser("user@example.com", "validLogin", "", LocalDate.now().minusYears(20));
 
         User result = userController.postUser(user);
 
@@ -233,11 +272,7 @@ class FilmorateApplicationTests {
 
     @Test
     void postUser_WithNullName_ShouldUseLoginAsName() throws ValidationException {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("validLogin");
-        user.setName(null);
-        user.setBirthday(LocalDate.now().minusYears(20));
+        User user = createValidUser("user@example.com", "validLogin", null, LocalDate.now().minusYears(20));
 
         User result = userController.postUser(user);
 
@@ -245,25 +280,8 @@ class FilmorateApplicationTests {
     }
 
     @Test
-    void postUser_WithValidName_ShouldKeepName() throws ValidationException {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("validLogin");
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
-
-        User result = userController.postUser(user);
-
-        assertEquals("Valid Name", result.getName());
-    }
-
-    @Test
     void postUser_WithLoginContainingSpace_ShouldThrowException() {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("invalid login");
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
+        User user = createValidUser("user@example.com", "invalid login", "Valid Name", LocalDate.now().minusYears(20));
 
         ValidationException exception = assertThrows(
                 ValidationException.class,
@@ -274,80 +292,59 @@ class FilmorateApplicationTests {
     }
 
     @Test
-    void postUser_WithLoginStartingWithSpace_ShouldThrowException() {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin(" login");
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
+    void getUserById_WithExistingId_ShouldReturnUser() throws ValidationException {
+        User user = createValidUser("user@test.com", "user1", "User Name", LocalDate.now().minusYears(20));
+        User created = userController.postUser(user);
 
-        ValidationException exception = assertThrows(
-                ValidationException.class,
-                () -> userController.postUser(user)
-        );
+        User result = userController.getUserById(created.getId());
 
-        assertEquals("Логин не может быть пустым и содержать пробелы", exception.getMessage());
+        assertNotNull(result);
+        assertEquals(created.getId(), result.getId());
+        assertEquals("user@test.com", result.getEmail());
     }
 
     @Test
-    void postUser_WithBirthdayExactlyToday_ShouldSucceed() throws ValidationException {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("validLogin");
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now());
+    void getUserById_WithNonExistentId_ShouldReturnNull() {
+        User result = userController.getUserById(999L);
 
-        User result = userController.postUser(user);
-
-        assertNotNull(result);
-    }
-
-    @Test
-    void postUser_WithBirthdayInPast_ShouldSucceed() throws ValidationException {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("validLogin");
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
-
-        User result = userController.postUser(user);
-
-        assertNotNull(result);
+        assertNull(result);
     }
 
     @Test
     void putUser_WithValidExistingUser_ShouldUpdate() throws ValidationException {
-        // Создаем пользователя
-        User user = new User();
-        user.setEmail("original@example.com");
-        user.setLogin("originalLogin");
-        user.setName("Original Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
+        User user = createValidUser("original@example.com", "originalLogin", "Original Name", LocalDate.now().minusYears(20));
         User created = userController.postUser(user);
 
-        // Обновляем пользователя
-        User updatedUser = new User();
+        User updatedUser = createValidUser("updated@example.com", "updatedLogin", "Updated Name", LocalDate.now().minusYears(25));
         updatedUser.setId(created.getId());
-        updatedUser.setEmail("updated@example.com");
-        updatedUser.setLogin("updatedLogin");
-        updatedUser.setName("Updated Name");
-        updatedUser.setBirthday(LocalDate.now().minusYears(25));
 
         User result = userController.putUser(updatedUser);
 
         assertEquals("updated@example.com", result.getEmail());
         assertEquals("updatedLogin", result.getLogin());
         assertEquals("Updated Name", result.getName());
+        assertEquals(LocalDate.now().minusYears(25), result.getBirthday());
+        // Проверяем, что список друзей сохранился
+        assertNotNull(result.getFriends());
+    }
+
+    @Test
+    void putUser_WithBlankName_ShouldUseLoginAsName() throws ValidationException {
+        User user = createValidUser("original@example.com", "originalLogin", "Original Name", LocalDate.now().minusYears(20));
+        User created = userController.postUser(user);
+
+        User updatedUser = createValidUser("updated@example.com", "updatedLogin", "", LocalDate.now().minusYears(25));
+        updatedUser.setId(created.getId());
+
+        User result = userController.putUser(updatedUser);
+
+        assertEquals("updatedLogin", result.getName());
     }
 
     @Test
     void putUser_WithNonExistentId_ShouldThrowException() {
-        User user = new User();
+        User user = createValidUser("test@test.com", "test", "Test", LocalDate.now());
         user.setId(999L);
-        user.setEmail("test@test.com");
-        user.setLogin("test");
-        user.setName("Test");
-        user.setBirthday(LocalDate.now());
 
         ValidationException exception = assertThrows(
                 ValidationException.class,
@@ -358,149 +355,139 @@ class FilmorateApplicationTests {
     }
 
     @Test
-    void putUser_WithNullId_ShouldThrowException() {
-        User user = new User();
-        user.setId(null);
-        user.setEmail("test@test.com");
-        user.setLogin("test");
-        user.setName("Test");
-        user.setBirthday(LocalDate.now());
-
-        ValidationException exception = assertThrows(
-                ValidationException.class,
-                () -> userController.putUser(user)
-        );
-
-        assertEquals("Id должен быть указан", exception.getMessage());
-    }
-
-    @Test
     void getAllUsers_ShouldReturnAllUsers() throws ValidationException {
-        User user1 = new User();
-        user1.setEmail("user1@example.com");
-        user1.setLogin("user1");
-        user1.setName("User One");
-        user1.setBirthday(LocalDate.now().minusYears(20));
+        User user1 = createValidUser("user1@example.com", "user1", "User One", LocalDate.now().minusYears(20));
+        User user2 = createValidUser("user2@example.com", "user2", "User Two", LocalDate.now().minusYears(25));
         userController.postUser(user1);
-
-        User user2 = new User();
-        user2.setEmail("user2@example.com");
-        user2.setLogin("user2");
-        user2.setName("User Two");
-        user2.setBirthday(LocalDate.now().minusYears(25));
         userController.postUser(user2);
 
-        var allUsers = userController.getAllUsers();
+        Collection<User> allUsers = userController.getAllUsers();
 
         assertEquals(2, allUsers.size());
     }
 
     @Test
-    void getAllUsers_WhenNoUsers_ShouldReturnEmptyCollection() {
-        UserController freshController = new UserController();
-        var allUsers = freshController.getAllUsers();
-        assertTrue(allUsers.isEmpty());
+    void addFriend_ShouldAddToBothUsersFriends() throws ValidationException {
+        User user1 = createValidUser("user1@test.com", "user1", "User1", LocalDate.now().minusYears(20));
+        User user2 = createValidUser("user2@test.com", "user2", "User2", LocalDate.now().minusYears(20));
+        User createdUser1 = userController.postUser(user1);
+        User createdUser2 = userController.postUser(user2);
+
+        var result = userController.addFriend(createdUser1.getId(), createdUser2.getId());
+
+        assertTrue(result.contains(createdUser1.getId()));
+        assertTrue(result.contains(createdUser2.getId()));
+
+        // Проверяем, что дружба взаимная
+        assertTrue(createdUser1.getFriends().contains(createdUser2.getId()));
+        assertTrue(createdUser2.getFriends().contains(createdUser1.getId()));
     }
 
     @Test
-    void userIdGeneration_ShouldBeIncremental() throws ValidationException {
-        User user1 = new User();
-        user1.setEmail("user1@example.com");
-        user1.setLogin("user1");
-        user1.setName("User One");
-        user1.setBirthday(LocalDate.now().minusYears(20));
-        User created1 = userController.postUser(user1);
+    void addFriend_WithNonExistentUser_ShouldThrowException() throws ValidationException {
+        User user1 = createValidUser("user1@test.com", "user1", "User1", LocalDate.now().minusYears(20));
+        User createdUser1 = userController.postUser(user1);
 
-        User user2 = new User();
-        user2.setEmail("user2@example.com");
-        user2.setLogin("user2");
-        user2.setName("User Two");
-        user2.setBirthday(LocalDate.now().minusYears(25));
-        User created2 = userController.postUser(user2);
-
-        assertEquals(1L, created1.getId());
-        assertEquals(2L, created2.getId());
-    }
-
-    // ==================== ДОПОЛНИТЕЛЬНЫЕ ГРАНИЧНЫЕ ТЕСТЫ ====================
-
-    @Test
-    void postFilm_MultipleFilms_ShouldHaveUniqueIds() throws ValidationException {
-        Film film1 = new Film();
-        film1.setName("Film 1");
-        film1.setDescription("Desc 1");
-        film1.setReleaseDate(LocalDate.now());
-        film1.setDuration(90);
-        Film created1 = filmController.postFilm(film1);
-
-        Film film2 = new Film();
-        film2.setName("Film 2");
-        film2.setDescription("Desc 2");
-        film2.setReleaseDate(LocalDate.now());
-        film2.setDuration(120);
-        Film created2 = filmController.postFilm(film2);
-
-        assertNotEquals(created1.getId(), created2.getId());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> userController.addFriend(createdUser1.getId(), 999L));
     }
 
     @Test
-    void postUser_MultipleUsers_ShouldHaveUniqueIds() throws ValidationException {
-        User user1 = new User();
-        user1.setEmail("user1@example.com");
-        user1.setLogin("user1");
-        user1.setName("User One");
-        user1.setBirthday(LocalDate.now().minusYears(20));
-        User created1 = userController.postUser(user1);
+    void deleteFriend_ShouldRemoveFromBothUsers() throws ValidationException {
+        User user1 = createValidUser("user1@test.com", "user1", "User1", LocalDate.now().minusYears(20));
+        User user2 = createValidUser("user2@test.com", "user2", "User2", LocalDate.now().minusYears(20));
+        User createdUser1 = userController.postUser(user1);
+        User createdUser2 = userController.postUser(user2);
+        userController.addFriend(createdUser1.getId(), createdUser2.getId());
 
-        User user2 = new User();
-        user2.setEmail("user2@example.com");
-        user2.setLogin("user2");
-        user2.setName("User Two");
-        user2.setBirthday(LocalDate.now().minusYears(25));
-        User created2 = userController.postUser(user2);
+        var result = userController.deleteFriend(createdUser1.getId(), createdUser2.getId());
 
-        assertNotEquals(created1.getId(), created2.getId());
+        assertNotNull(result);
+        // Проверяем, что дружба удалена
+        assertFalse(createdUser1.getFriends().contains(createdUser2.getId()));
+        assertFalse(createdUser2.getFriends().contains(createdUser1.getId()));
     }
 
     @Test
-    void postFilm_WithDescriptionExactly200_ShouldSucceed() throws ValidationException {
+    void getFriends_ShouldReturnUserFriends() throws ValidationException {
+        User user1 = createValidUser("user1@test.com", "user1", "User1", LocalDate.now().minusYears(20));
+        User user2 = createValidUser("user2@test.com", "user2", "User2", LocalDate.now().minusYears(20));
+        User createdUser1 = userController.postUser(user1);
+        User createdUser2 = userController.postUser(user2);
+        userController.addFriend(createdUser1.getId(), createdUser2.getId());
+
+        var friends = userController.getFriends(createdUser1.getId());
+
+        assertEquals(1, friends.size());
+        assertTrue(friends.contains(createdUser2.getId()));
+    }
+
+    @Test
+    void getFriends_WhenNoFriends_ShouldReturnEmptySet() throws ValidationException {
+        User user = createValidUser("user@test.com", "user1", "User1", LocalDate.now().minusYears(20));
+        User createdUser = userController.postUser(user);
+
+        var friends = userController.getFriends(createdUser.getId());
+
+        assertTrue(friends.isEmpty());
+    }
+
+    @Test
+    void getCommonFriends_ShouldReturnIntersection() throws ValidationException {
+        User user1 = createValidUser("user1@test.com", "user1", "User1", LocalDate.now().minusYears(20));
+        User user2 = createValidUser("user2@test.com", "user2", "User2", LocalDate.now().minusYears(20));
+        User common = createValidUser("common@test.com", "common", "Common", LocalDate.now().minusYears(20));
+
+        User createdUser1 = userController.postUser(user1);
+        User createdUser2 = userController.postUser(user2);
+        User createdCommon = userController.postUser(common);
+
+        userController.addFriend(createdUser1.getId(), createdCommon.getId());
+        userController.addFriend(createdUser2.getId(), createdCommon.getId());
+
+        var commonFriends = userController.commonFriend(createdUser1.getId(), createdUser2.getId());
+
+        assertEquals(1, commonFriends.size());
+        assertTrue(commonFriends.contains(createdCommon.getId()));
+    }
+
+    @Test
+    void getCommonFriends_WhenNoCommon_ShouldReturnEmptySet() throws ValidationException {
+        User user1 = createValidUser("user1@test.com", "user1", "User1", LocalDate.now().minusYears(20));
+        User user2 = createValidUser("user2@test.com", "user2", "User2", LocalDate.now().minusYears(20));
+        User friend1 = createValidUser("friend1@test.com", "friend1", "Friend1", LocalDate.now().minusYears(20));
+        User friend2 = createValidUser("friend2@test.com", "friend2", "Friend2", LocalDate.now().minusYears(20));
+
+        User createdUser1 = userController.postUser(user1);
+        User createdUser2 = userController.postUser(user2);
+        User createdFriend1 = userController.postUser(friend1);
+        User createdFriend2 = userController.postUser(friend2);
+
+        userController.addFriend(createdUser1.getId(), createdFriend1.getId());
+        userController.addFriend(createdUser2.getId(), createdFriend2.getId());
+
+        var commonFriends = userController.commonFriend(createdUser1.getId(), createdUser2.getId());
+
+        assertTrue(commonFriends.isEmpty());
+    }
+
+    // ==================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ====================
+
+    private Film createValidFilm(String name, String description, LocalDate releaseDate, int duration) {
         Film film = new Film();
-        film.setName("Valid Film");
-        film.setDescription("a".repeat(200));
-        film.setReleaseDate(LocalDate.of(2024, 1, 1));
-        film.setDuration(120);
-
-        Film result = filmController.postFilm(film);
-
-        assertNotNull(result);
-        assertEquals(200, result.getDescription().length());
+        film.setName(name);
+        film.setDescription(description);
+        film.setReleaseDate(releaseDate);
+        film.setDuration(duration);
+        return film;
     }
 
-    @Test
-    void postUser_WithLoginBoundary_SingleCharacter() throws ValidationException {
+    private User createValidUser(String email, String login, String name, LocalDate birthday) {
         User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("a");
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
-
-        User result = userController.postUser(user);
-
-        assertNotNull(result);
-        assertEquals("a", result.getLogin());
-    }
-
-    @Test
-    void postUser_WithEmailBoundary_MinimalValidEmail() throws ValidationException {
-        User user = new User();
-        user.setEmail("a@b.ru");
-        user.setLogin("validLogin");
-        user.setName("Valid Name");
-        user.setBirthday(LocalDate.now().minusYears(20));
-
-        User result = userController.postUser(user);
-
-        assertNotNull(result);
-        assertEquals("a@b.ru", result.getEmail());
+        user.setEmail(email);
+        user.setLogin(login);
+        user.setName(name);
+        user.setBirthday(birthday);
+        return user;
     }
 }

@@ -35,9 +35,9 @@ public class InMemoryFilmStorage implements FilmStorage {
     }
 
     @Override
-    public Long addFilm(Long id, Film film) {
+    public Film addFilm(Long id, Film film) {
         films.put(id, film);
-        return id;
+        return films.get(id);
     }
 
     @Override
@@ -56,8 +56,8 @@ public class InMemoryFilmStorage implements FilmStorage {
     }
 
     @Override
-    public Long deleteFilm(Long id) {
-        films.remove(id);
+    public Long deleteLikeFromFilm(Long id) {
+        getFilmById(id).getIdOfUsersWhoLikedThisFilm().remove(id);
         return id;
     }
 }
