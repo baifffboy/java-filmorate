@@ -12,7 +12,7 @@ public interface FilmStorage {
 
     List<Film> getPopularFilmLimitCount(int count);
 
-    Film addFilm(Long id, Film film);
+    Film addFilm(Film film);
 
     Film deleteLikeFromFilm(Long id, Long whoIsDeleted);
 

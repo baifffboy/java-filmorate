@@ -13,6 +13,7 @@ import ru.yandex.practicum.filmorate.model.ErrorResponse;
 public class ExceptionHandler {
 
     @org.springframework.web.bind.annotation.ExceptionHandler(ValidationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleValidationException(ValidationException e) {
         return new ErrorResponse(e.getMessage());
     }

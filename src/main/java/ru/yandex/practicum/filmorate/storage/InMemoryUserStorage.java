@@ -1,14 +1,13 @@
 package ru.yandex.practicum.filmorate.storage;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.model.User;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @Component
+@Slf4j
 public class InMemoryUserStorage implements UserStorage {
     private final Map<Long, User> users = new HashMap<>();
 
@@ -39,18 +38,16 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public User addUser(Long id, User user) {
-        if (user.getName() == null || user.getName().isBlank()) {
-            user.setName(user.getLogin());
-        }
         users.put(id, user);
+        log.info("Пользователь создан с id={}", id);
         return users.get(id);
     }
 
     @Override
-    public User deleteUser(Long id, Long whoIsDeleted) {
-        User deletedUser = users.get(id);
-        users.get(id).getFriends().remove(whoIsDeleted);
-        return deletedUser;
+    public Collection<User> deleteFriend(Long id, Long friendId) {
+        users.get(id).getFriends().remove(friendId);
+        users.get(friendId).getFriends().remove(id);
+        return List.of(users.get(id), users.get(friendId));
     }
 
     @Override
@@ -62,5 +59,12 @@ public class InMemoryUserStorage implements UserStorage {
         if (user.getName() == null || user.getName().isBlank()) user.setName(user.getLogin());
         users.put(user.getId(), user);
         return user;
+    }
+
+    @Override
+    public Collection<User> addFriend(Long id, Long friendId) {
+        users.get(id).getFriends().add(friendId);
+        users.get(friendId).getFriends().add(id);
+        return List.of(users.get(id), users.get(friendId));
     }
 }
