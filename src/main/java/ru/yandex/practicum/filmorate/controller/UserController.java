@@ -5,11 +5,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.dto.UserDto;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.mapper.UserMapper;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
 
 import java.util.Collection;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -25,49 +28,66 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public User getUserById(@PathVariable Long id) {
-        return userService.getUserByIdFromStorage(id);
+    public UserDto getUserById(@PathVariable Long id) {
+        User user = userService.getUserByIdFromStorage(id);
+        return UserMapper.toDto(user);
     }
 
     @PutMapping("/{id}/friends/{friendId}")
-    public Collection<User> addFriend(@PathVariable Long id,
-                                      @PathVariable Long friendId) {
-        return userService.addFriendInStorage(id, friendId);
+    public Collection<UserDto> addFriend(@PathVariable Long id,
+                                         @PathVariable Long friendId) {
+        Collection<User> friends = userService.addFriendInStorage(id, friendId);
+        return friends.stream()
+                .map(UserMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @DeleteMapping("/{id}/friends/{friendId}")
-    public Collection<User> deleteFriend(@PathVariable Long id,
-                                         @PathVariable Long friendId) {
-        return userService.deleteFriendInStorage(id, friendId);
+    public Collection<UserDto> deleteFriend(@PathVariable Long id,
+                                            @PathVariable Long friendId) {
+        Collection<User> friends = userService.deleteFriendInStorage(id, friendId);
+        return friends.stream()
+                .map(UserMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/{id}/friends")
-    public Collection<User> getFriends(@PathVariable Long id) {
-        return userService.getFriends(id);
+    public Collection<UserDto> getFriends(@PathVariable Long id) {
+        Collection<User> friends = userService.getFriends(id);
+        return friends.stream()
+                .map(UserMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/{id}/friends/common/{otherId}")
-    public Collection<User> commonFriend(@PathVariable Long id,
-                                         @PathVariable Long otherId) {
-        return userService.getCommonFriends(id, otherId);
+    public Collection<UserDto> commonFriend(@PathVariable Long id,
+                                            @PathVariable Long otherId) {
+        Collection<User> commonFriends = userService.getCommonFriends(id, otherId);
+        return commonFriends.stream()
+                .map(UserMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @PostMapping
-    public User postUser(@Valid @RequestBody User user) throws ValidationException {
+    public UserDto postUser(@Valid @RequestBody User user) throws ValidationException {
         log.info("Создание пользователя: {}", user);
-        return userService.addUserInStorage(user);
+        User createdUser = userService.addUserInStorage(user);
+        return UserMapper.toDto(createdUser);
     }
 
     @PutMapping
-    public User putUser(@Valid @RequestBody User user) throws ValidationException {
+    public UserDto putUser(@Valid @RequestBody User user) throws ValidationException {
         log.info("Пользователь редактирует пользователя " + user.toString());
-        return userService.updateUserInStorage(user);
+        User updatedUser = userService.updateUserInStorage(user);
+        return UserMapper.toDto(updatedUser);
     }
 
     @GetMapping
-    public Collection<User> getAllUsers() {
-        log.info("Пользователь запросил все пользователей");
-        return userService.getAllUsersFromStorage();
+    public Collection<UserDto> getAllUsers() {
+        log.info("Пользователь запросил всех пользователей");
+        Collection<User> users = userService.getAllUsersFromStorage();
+        return users.stream()
+                .map(UserMapper::toDto)
+                .collect(Collectors.toList());
     }
-
 }

@@ -14,6 +14,10 @@ import java.util.Set;
 public class User {
     private Long id;
     private Set<Long> friends = new HashSet<>();
+    private boolean isFriend;
+
+    public User() {
+    }
 
     @NotNull(message = "Email не может быть null")
     @NotBlank(message = "Email не может быть пустым")

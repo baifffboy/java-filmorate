@@ -2,40 +2,40 @@ package ru.yandex.practicum.filmorate.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
+import ru.yandex.practicum.filmorate.dal.UserRepository;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.util.Collection;
-import java.util.stream.Collectors;
+import java.util.List;
 
 @Service
 @Slf4j
 public class UserService {
 
-    private final UserStorage userStorage;
+    private final UserRepository userRepository;
 
     @Autowired
-    public UserService(UserStorage userStorage) {
-        this.userStorage = userStorage;
-    }
-
-    public boolean containsKey(Long id) {
-        return userStorage.containsKey(id);
+    public UserService(@Qualifier("jdbcUserStorage") UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
     public User getUserByIdFromStorage(Long id) {
-        User user = userStorage.getUserById(id);
-        if (user == null)
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Пользователь с id = " + id + " не найден"));
+
+        List<User> friends = userRepository.findFriends(id);
+        user.getFriends().clear();
+        friends.forEach(friend -> user.getFriends().add(friend.getId()));
+
         return user;
     }
 
     public Collection<User> getAllUsersFromStorage() {
-        return userStorage.getAllValues();
+        return userRepository.findAll();
     }
 
     public User addUserInStorage(User user) {
@@ -46,14 +46,7 @@ public class UserService {
         if (user.getName() == null || user.getName().isBlank()) {
             user.setName(user.getLogin());
         }
-        user.setId(userStorage.getNextId());
-        return userStorage.addUser(user.getId(), user);
-    }
-
-    public Collection<User> deleteFriendInStorage(Long id, Long friendId) {
-        if (!this.containsKey(id) || !this.containsKey(friendId))
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        return userStorage.deleteFriend(id, friendId);
+        return userRepository.save(user);
     }
 
     public User updateUserInStorage(User user) {
@@ -61,34 +54,52 @@ public class UserService {
             log.error("Ошибка порядкового номера(id) пользователя");
             throw new ValidationException("Id должен быть указан");
         }
-        if (!this.containsKey(user.getId())) {
-            log.error("Ошибка существования пользователя");
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Пост с id = " + user.getId() + " не найден");
-        }
+
+        userRepository.findById(user.getId())
+                .orElseThrow(() -> new NotFoundException("Пользователь с id = " + user.getId() + " не найден"));
+
         if (user.getLogin().contains(" ")) {
             log.error("Логин не может содержать пробелы");
             throw new ValidationException("Логин не может быть пустым и содержать пробелы");
         }
-        return userStorage.updateUser(user);
+
+        if (user.getName() == null || user.getName().isBlank()) {
+            user.setName(user.getLogin());
+        }
+
+        return userRepository.update(user);
     }
 
+    // ОДНОСТОРОННЯЯ ДРУЖБА
     public Collection<User> addFriendInStorage(Long id, Long friendId) {
-        if (!this.containsKey(id) || !this.containsKey(friendId))
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        return userStorage.addFriend(id, friendId);
+        getUserByIdFromStorage(id);
+        getUserByIdFromStorage(friendId);
+        userRepository.addFriend(id, friendId);
+        return getFriends(id);
+    }
+
+    // ОДНОСТОРОННЯЯ ДРУЖБА
+    public Collection<User> deleteFriendInStorage(Long id, Long friendId) {
+        User user = getUserByIdFromStorage(id);
+        getUserByIdFromStorage(friendId);
+
+        if (!user.getFriends().contains(friendId)) {
+            throw new NotFoundException("Пользователи " + id + " и " + friendId + " не являются друзьями");
+        }
+
+        userRepository.deleteFriend(id, friendId);
+        user.getFriends().remove(friendId);
+        return getFriends(id);
     }
 
     public Collection<User> getFriends(Long id) {
-        if (!this.containsKey(id)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        return this.getUserByIdFromStorage(id).getFriends().stream()
-                .map(this::getUserByIdFromStorage)
-                .collect(Collectors.toList());
+        getUserByIdFromStorage(id);
+        return userRepository.findFriends(id);
     }
 
     public Collection<User> getCommonFriends(Long id, Long otherId) {
-        return getUserByIdFromStorage(id).getFriends().stream()
-                .filter(this.getUserByIdFromStorage(otherId).getFriends()::contains)
-                .map(this::getUserByIdFromStorage)
-                .collect(Collectors.toSet());
+        getUserByIdFromStorage(id);
+        getUserByIdFromStorage(otherId);
+        return userRepository.findCommonFriends(id, otherId);
     }
 }

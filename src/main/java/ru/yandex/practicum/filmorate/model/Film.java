@@ -8,12 +8,18 @@ import lombok.Data;
 
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 @Data
 public class Film {
     private Long id;
     private Set<Long> idOfUsersWhoLikedThisFilm = new HashSet<>();
+    private Set<GenreOfFilm> genres = new LinkedHashSet<>();  // Set из enum
+    private MotionPictureAssociation mpa;  // enum
+
+    public Film() {
+    }
 
     @NotNull(message = "Название не может быть null")
     @NotBlank(message = "Название не может быть пустым")
