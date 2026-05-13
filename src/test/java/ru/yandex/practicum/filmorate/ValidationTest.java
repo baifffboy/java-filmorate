@@ -34,8 +34,6 @@ class ValidationTest {
         }
     }
 
-    // ==================== ТЕСТЫ ДЛЯ FILM ====================
-
     @Test
     void film_WithEmptyName_ShouldHaveValidationError() {
         Film film = new Film();
@@ -172,8 +170,6 @@ class ValidationTest {
 
         assertTrue(violations.isEmpty());
     }
-
-    // ==================== ТЕСТЫ ДЛЯ USER ====================
 
     @Test
     void user_WithEmptyEmail_ShouldHaveValidationError() {

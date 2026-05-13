@@ -70,7 +70,6 @@ public class UserService {
         return userRepository.update(user);
     }
 
-    // ОДНОСТОРОННЯЯ ДРУЖБА
     public Collection<User> addFriendInStorage(Long id, Long friendId) {
         getUserByIdFromStorage(id);
         getUserByIdFromStorage(friendId);
@@ -78,7 +77,6 @@ public class UserService {
         return getFriends(id);
     }
 
-    // ОДНОСТОРОННЯЯ ДРУЖБА
     public Collection<User> deleteFriendInStorage(Long id, Long friendId) {
         User user = getUserByIdFromStorage(id);
         getUserByIdFromStorage(friendId);

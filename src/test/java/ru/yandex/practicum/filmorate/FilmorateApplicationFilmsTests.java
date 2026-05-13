@@ -324,8 +324,6 @@ class FilmorateApplicationFilmsTests {
         assertTrue(popularFilms.isEmpty());
     }
 
-    // ==================== ТЕСТЫ ДЛЯ GENRES (ЖАНРЫ) ====================
-
     @Test
     void getAllGenres_ShouldReturnSixGenres() {
         List<GenreDto> genres = genreController.getAllGenres();
@@ -357,8 +355,6 @@ class FilmorateApplicationFilmsTests {
     void getGenreById_WhenIdDoesNotExist_ShouldThrowException() {
         assertThrows(NotFoundException.class, () -> genreController.getGenreById(999));
     }
-
-    // ==================== ТЕСТЫ ДЛЯ MPA (РЕЙТИНГИ) ====================
 
     @Test
     void getAllMpa_ShouldReturnFiveRatings() {

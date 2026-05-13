@@ -17,7 +17,6 @@ public class GenreRowMapper implements RowMapper<GenreOfFilm> {
             return null;
         }
 
-        // Маппинг русских названий из БД в enum
         switch (genreName) {
             case "Комедия":
                 return GenreOfFilm.COMEDY;

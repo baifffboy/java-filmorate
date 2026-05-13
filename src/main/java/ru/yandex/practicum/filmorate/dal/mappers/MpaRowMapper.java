@@ -17,7 +17,6 @@ public class MpaRowMapper implements RowMapper<MotionPictureAssociation> {
             return null;
         }
 
-        // Маппинг названий из БД в enum
         switch (mpaName) {
             case "G":
                 return MotionPictureAssociation.G;

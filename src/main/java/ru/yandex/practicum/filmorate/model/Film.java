@@ -15,8 +15,8 @@ import java.util.Set;
 public class Film {
     private Long id;
     private Set<Long> idOfUsersWhoLikedThisFilm = new HashSet<>();
-    private Set<GenreOfFilm> genres = new LinkedHashSet<>();  // Set из enum
-    private MotionPictureAssociation mpa;  // enum
+    private Set<GenreOfFilm> genres = new LinkedHashSet<>();
+    private MotionPictureAssociation mpa;
 
     public Film() {
     }

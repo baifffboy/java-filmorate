@@ -15,7 +15,7 @@ public class FilmMapper {
         dto.setDescription(film.getDescription());
         dto.setReleaseDate(film.getReleaseDate());
         dto.setDuration(film.getDuration());
-        dto.setGenres(film.getGenres());  // Изменено: getGenres, не getGenre
+        dto.setGenres(film.getGenres());
         dto.setMpa(film.getMpa());
         if (film.getIdOfUsersWhoLikedThisFilm() != null) {
             dto.setLikesCount(film.getIdOfUsersWhoLikedThisFilm().size());
@@ -33,7 +33,7 @@ public class FilmMapper {
         film.setDescription(dto.getDescription());
         film.setReleaseDate(dto.getReleaseDate());
         film.setDuration(dto.getDuration());
-        film.setGenres(dto.getGenres());  // Изменено: setGenres, не setGenre
+        film.setGenres(dto.getGenres());
         film.setMpa(dto.getMpa());
         return film;
     }

@@ -19,8 +19,6 @@ public class UserRepository extends BaseRepository<User> {
     private static final String INSERT_QUERY = "INSERT INTO users(email, login, name, birthday) VALUES (?, ?, ?, ?)";
     private static final String UPDATE_QUERY = "UPDATE users SET email = ?, login = ?, name = ?, birthday = ? WHERE id = ?";
     private static final String DELETE_QUERY = "DELETE FROM users WHERE id = ?";
-
-    // ОДНОСТОРОННЯЯ ДРУЖБА
     private static final String ADD_FRIEND_QUERY = "INSERT INTO friends(user_id, friend_id) VALUES (?, ?)";
     private static final String DELETE_FRIEND_QUERY = "DELETE FROM friends WHERE user_id = ? AND friend_id = ?";
     private static final String FIND_FRIENDS_QUERY =
@@ -75,7 +73,6 @@ public class UserRepository extends BaseRepository<User> {
         return delete(DELETE_QUERY, id);
     }
 
-    // ОДНОСТОРОННЯЯ ДРУЖБА - добавляем только в одну сторону
     public void addFriend(long userId, long friendId) {
         String checkQuery = "SELECT COUNT(*) FROM friends WHERE user_id = ? AND friend_id = ?";
         Integer count = jdbc.queryForObject(checkQuery, Integer.class, userId, friendId);
@@ -84,7 +81,6 @@ public class UserRepository extends BaseRepository<User> {
         }
     }
 
-    // ОДНОСТОРОННЯЯ ДРУЖБА - удаляем только из одной стороны
     public void deleteFriend(long userId, long friendId) {
         String checkQuery = "SELECT COUNT(*) FROM friends WHERE user_id = ? AND friend_id = ?";
         Integer count = jdbc.queryForObject(checkQuery, Integer.class, userId, friendId);
