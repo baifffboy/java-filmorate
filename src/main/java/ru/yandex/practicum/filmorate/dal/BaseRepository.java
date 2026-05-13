@@ -37,8 +37,6 @@ public class BaseRepository<T> {
 
     protected void update(String query, Object... params) {
         int rowsUpdated = jdbc.update(query, params);
-        if (rowsUpdated == 0) {
-        }
     }
 
     protected long insert(String query, Object... params) {
