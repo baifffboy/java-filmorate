@@ -14,10 +14,7 @@ public class JacksonConfig {
     public SimpleModule filmorateModule() {
         SimpleModule module = new SimpleModule();
 
-        // Регистрируем десериализатор для MPA
         module.addDeserializer(MotionPictureAssociation.class, new MpaDeserializer());
-
-        // Регистрируем десериализатор для жанров
         module.addDeserializer(Set.class, new GenreDeserializer());
 
         return module;
