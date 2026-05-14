@@ -20,12 +20,24 @@ public class GenreDeserializer extends JsonDeserializer<Set<GenreOfFilm>> {
 
         if (node.isArray()) {
             for (JsonNode genreNode : node) {
+                GenreOfFilm genre = null;
+
                 if (genreNode.has("id")) {
                     int id = genreNode.get("id").asInt();
-                    GenreOfFilm genre = mapIdToGenre(id);
-                    if (genre != null) {
-                        genres.add(genre);
+                    genre = mapIdToGenre(id);
+                } else if (genreNode.isInt()) {
+                    genre = mapIdToGenre(genreNode.asInt());
+                } else if (genreNode.isTextual()) {
+                    String name = genreNode.asText();
+                    try {
+                        genre = GenreOfFilm.valueOf(name);
+                    } catch (IllegalArgumentException e) {
+                        // Игнорируем
                     }
+                }
+
+                if (genre != null) {
+                    genres.add(genre);
                 }
             }
         }

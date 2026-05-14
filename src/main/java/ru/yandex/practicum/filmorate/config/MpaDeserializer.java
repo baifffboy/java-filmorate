@@ -21,6 +21,11 @@ public class MpaDeserializer extends JsonDeserializer<MotionPictureAssociation> 
             return mapIdToMpa(id);
         }
 
+        // Если пришло число
+        if (node.isInt()) {
+            return mapIdToMpa(node.asInt());
+        }
+
         // Если пришла строка
         String value = node.asText();
         if (value != null && !value.isEmpty()) {
@@ -28,7 +33,12 @@ public class MpaDeserializer extends JsonDeserializer<MotionPictureAssociation> 
                 int id = Integer.parseInt(value);
                 return mapIdToMpa(id);
             } catch (NumberFormatException e) {
-                return MotionPictureAssociation.valueOf(value);
+                // Пробуем как название энума
+                try {
+                    return MotionPictureAssociation.valueOf(value);
+                } catch (IllegalArgumentException ex) {
+                    return null;
+                }
             }
         }
 
