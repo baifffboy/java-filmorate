@@ -71,19 +71,26 @@ public class UserService {
     }
 
     public Collection<User> addFriendInStorage(Long id, Long friendId) {
-        getUserByIdFromStorage(id);
-        getUserByIdFromStorage(friendId);
+        User user = getUserByIdFromStorage(id);
+        User friend = getUserByIdFromStorage(friendId);
+
         userRepository.addFriend(id, friendId);
+
+        // ВАЖНО: Обновляем кэш друзей в объекте пользователя
+        user.getFriends().add(friendId);
+        // НЕ добавляем обратную дружбу! Дружба не взаимная в этой версии
+
         return getFriends(id);
     }
 
     public Collection<User> deleteFriendInStorage(Long id, Long friendId) {
-        // Проверяем существование пользователей
+        // Получаем пользователей
         User user = getUserByIdFromStorage(id);
         getUserByIdFromStorage(friendId);
 
-        // КРИТИЧНО: Проверяем, являются ли они друзьями
+        // ВАЖНО: Проверяем, есть ли дружба
         if (!user.getFriends().contains(friendId)) {
+            log.warn("Попытка удалить несуществующую дружбу между {} и {}", id, friendId);
             throw new NotFoundException("Пользователи " + id + " и " + friendId + " не являются друзьями");
         }
 
@@ -91,7 +98,6 @@ public class UserService {
         userRepository.deleteFriend(id, friendId);
         user.getFriends().remove(friendId);
 
-        // Возвращаем обновлённый список друзей
         return getFriends(id);
     }
 
