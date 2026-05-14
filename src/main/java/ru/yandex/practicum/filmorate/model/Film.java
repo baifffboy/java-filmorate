@@ -1,10 +1,13 @@
 package ru.yandex.practicum.filmorate.model;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import ru.yandex.practicum.filmorate.config.GenreDeserializer;
+import ru.yandex.practicum.filmorate.config.MpaDeserializer;
 
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -15,7 +18,11 @@ import java.util.Set;
 public class Film {
     private Long id;
     private Set<Long> idOfUsersWhoLikedThisFilm = new HashSet<>();
+
+    @JsonDeserialize(using = GenreDeserializer.class)
     private Set<GenreOfFilm> genres = new LinkedHashSet<>();
+
+    @JsonDeserialize(using = MpaDeserializer.class)
     private MotionPictureAssociation mpa;
 
     public Film() {

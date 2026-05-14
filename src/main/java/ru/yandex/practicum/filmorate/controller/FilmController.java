@@ -66,38 +66,17 @@ public class FilmController {
     @PostMapping
     public FilmDto postFilm(@Valid @RequestBody Film film) throws ValidationException {
         log.info("Пользователь публикует новый фильм: {}", film);
-
-        // Конвертируем Film в параметры для сохранения
-        Film filmToSave = new Film();
-        filmToSave.setName(film.getName());
-        filmToSave.setDescription(film.getDescription());
-        filmToSave.setReleaseDate(film.getReleaseDate());
-        filmToSave.setDuration(film.getDuration());
-        filmToSave.setGenres(film.getGenres());
-        filmToSave.setMpa(film.getMpa());
-
-        Film createdFilm = filmService.addFilmInStorage(filmToSave);
+        Film createdFilm = filmService.addFilmInStorage(film);
         return convertToFilmDto(createdFilm);
     }
 
     @PutMapping
     public FilmDto putFilm(@Valid @RequestBody Film film) throws ValidationException {
         log.info("Пользователь редактирует фильм: {}", film);
-
         if (film.getId() == null) {
             throw new ValidationException("Id должен быть указан");
         }
-
-        Film filmToUpdate = new Film();
-        filmToUpdate.setId(film.getId());
-        filmToUpdate.setName(film.getName());
-        filmToUpdate.setDescription(film.getDescription());
-        filmToUpdate.setReleaseDate(film.getReleaseDate());
-        filmToUpdate.setDuration(film.getDuration());
-        filmToUpdate.setGenres(film.getGenres());
-        filmToUpdate.setMpa(film.getMpa());
-
-        Film updatedFilm = filmService.updateFilmInStorage(filmToUpdate);
+        Film updatedFilm = filmService.updateFilmInStorage(film);
         return convertToFilmDto(updatedFilm);
     }
 
@@ -120,12 +99,21 @@ public class FilmController {
         dto.setReleaseDate(film.getReleaseDate());
         dto.setDuration(film.getDuration());
 
+        // Количество лайков
+        if (film.getIdOfUsersWhoLikedThisFilm() != null) {
+            dto.setLikesCount(film.getIdOfUsersWhoLikedThisFilm().size());
+        } else {
+            dto.setLikesCount(0);
+        }
+
+        // MPA
         if (film.getMpa() != null) {
             Integer mpaId = mapMpaToId(film.getMpa());
             MpaDto mpaDto = mpaService.getMpaById(mpaId);
-            dto.setMpa(mpaDto);
+            dto.setMpa(mpaDto);  // ← setMpa
         }
 
+        // Жанры
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
             Set<GenreDto> genreDtos = new LinkedHashSet<>();
             for (GenreOfFilm genre : film.getGenres()) {
@@ -133,13 +121,7 @@ public class FilmController {
                 GenreDto genreDto = genreService.getGenreById(genreId);
                 genreDtos.add(genreDto);
             }
-            dto.setGenres(genreDtos);
-        }
-
-        if (film.getIdOfUsersWhoLikedThisFilm() != null) {
-            dto.setLikesCount(film.getIdOfUsersWhoLikedThisFilm().size());
-        } else {
-            dto.setLikesCount(0);
+            dto.setGenres(genreDtos);  // ← setGenres
         }
 
         return dto;
@@ -163,6 +145,24 @@ public class FilmController {
         }
     }
 
+    private String getMpaName(MotionPictureAssociation mpa) {
+        if (mpa == null) return null;
+        switch (mpa) {
+            case G:
+                return "G";
+            case PG:
+                return "PG";
+            case PG13:
+                return "PG-13";
+            case R:
+                return "R";
+            case NC17:
+                return "NC-17";
+            default:
+                return null;
+        }
+    }
+
     private Integer mapGenreToId(GenreOfFilm genre) {
         if (genre == null) return null;
         switch (genre) {
@@ -178,6 +178,26 @@ public class FilmController {
                 return 5;
             case ACTION:
                 return 6;
+            default:
+                return null;
+        }
+    }
+
+    private String getGenreName(GenreOfFilm genre) {
+        if (genre == null) return null;
+        switch (genre) {
+            case COMEDY:
+                return "Комедия";
+            case DRAMA:
+                return "Драма";
+            case CARTOON:
+                return "Мультфильм";
+            case THRILLER:
+                return "Триллер";
+            case DOCUMENTARY:
+                return "Документальный";
+            case ACTION:
+                return "Боевик";
             default:
                 return null;
         }

@@ -12,7 +12,7 @@ public class FilmDto {
     private String description;
     private LocalDate releaseDate;
     private Integer duration;
-    private MpaDto mpa;
-    private Set<GenreDto> genres;
+    private MpaDto mpa;           // ← Поле для MPA
+    private Set<GenreDto> genres; // ← Поле для жанров
     private Integer likesCount;
 }
