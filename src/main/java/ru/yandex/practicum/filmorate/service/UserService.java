@@ -79,8 +79,9 @@ public class UserService {
 
     public Collection<User> deleteFriendInStorage(Long id, Long friendId) {
         User user = getUserByIdFromStorage(id);
-        getUserByIdFromStorage(friendId);
+        User friend = getUserByIdFromStorage(friendId);
 
+        // Проверяем, есть ли дружба
         if (!user.getFriends().contains(friendId)) {
             throw new NotFoundException("Пользователи " + id + " и " + friendId + " не являются друзьями");
         }

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.dto.FilmDto;
 import ru.yandex.practicum.filmorate.dto.GenreDto;
 import ru.yandex.practicum.filmorate.dto.MpaDto;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.GenreOfFilm;
@@ -15,6 +16,7 @@ import ru.yandex.practicum.filmorate.service.FilmService;
 import ru.yandex.practicum.filmorate.service.GenreService;
 import ru.yandex.practicum.filmorate.service.MpaService;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -29,6 +31,7 @@ public class FilmController {
     private final FilmService filmService;
     private final MpaService mpaService;
     private final GenreService genreService;
+    private static final LocalDate MIN_RELEASE_DATE = LocalDate.of(1895, 12, 28);
 
     @Autowired
     public FilmController(FilmService filmService, MpaService mpaService, GenreService genreService) {
@@ -66,6 +69,35 @@ public class FilmController {
     @PostMapping
     public FilmDto postFilm(@Valid @RequestBody Film film) throws ValidationException {
         log.info("Пользователь публикует новый фильм: {}", film);
+
+        // Валидация даты релиза
+        if (film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
+            throw new ValidationException("Дата релиза должна быть не раньше 28 декабря 1895 года");
+        }
+
+        // ВАЖНО: Валидация MPA - проверяем, существует ли такой id
+        if (film.getMpa() != null) {
+            try {
+                // Пытаемся получить MPA по id (если сервис работает с id)
+                int mpaId = mapMpaToId(film.getMpa());
+                mpaService.getMpaById(mpaId);
+            } catch (NotFoundException e) {
+                throw new NotFoundException("Рейтинг MPA с id = " + mapMpaToId(film.getMpa()) + " не найден");
+            }
+        }
+
+        // ВАЖНО: Валидация жанров - проверяем, существуют ли такие id
+        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
+            for (GenreOfFilm genre : film.getGenres()) {
+                try {
+                    int genreId = mapGenreToId(genre);
+                    genreService.getGenreById(genreId);
+                } catch (NotFoundException e) {
+                    throw new NotFoundException("Жанр с id = " + mapGenreToId(genre) + " не найден");
+                }
+            }
+        }
+
         Film createdFilm = filmService.addFilmInStorage(film);
         return convertToFilmDto(createdFilm);
     }
@@ -73,9 +105,36 @@ public class FilmController {
     @PutMapping
     public FilmDto putFilm(@Valid @RequestBody Film film) throws ValidationException {
         log.info("Пользователь редактирует фильм: {}", film);
+
         if (film.getId() == null) {
             throw new ValidationException("Id должен быть указан");
         }
+
+        if (film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
+            throw new ValidationException("Дата релиза должна быть не раньше 28 декабря 1895 года");
+        }
+
+        // ВАЖНО: Валидация MPA
+        if (film.getMpa() != null) {
+            try {
+                int mpaId = mapMpaToId(film.getMpa());
+                mpaService.getMpaById(mpaId);
+            } catch (NotFoundException e) {
+                throw new NotFoundException("Рейтинг MPA с id = " + mapMpaToId(film.getMpa()) + " не найден");
+            }
+        }
+
+        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
+            for (GenreOfFilm genre : film.getGenres()) {
+                try {
+                    int genreId = mapGenreToId(genre);
+                    genreService.getGenreById(genreId);
+                } catch (NotFoundException e) {
+                    throw new NotFoundException("Жанр с id = " + mapGenreToId(genre) + " не найден");
+                }
+            }
+        }
+
         Film updatedFilm = filmService.updateFilmInStorage(film);
         return convertToFilmDto(updatedFilm);
     }
@@ -198,6 +257,42 @@ public class FilmController {
                 return "Документальный";
             case ACTION:
                 return "Боевик";
+            default:
+                return null;
+        }
+    }
+
+    private MotionPictureAssociation mapIdToMpa(int id) {
+        switch (id) {
+            case 1:
+                return MotionPictureAssociation.G;
+            case 2:
+                return MotionPictureAssociation.PG;
+            case 3:
+                return MotionPictureAssociation.PG13;
+            case 4:
+                return MotionPictureAssociation.R;
+            case 5:
+                return MotionPictureAssociation.NC17;
+            default:
+                return null;
+        }
+    }
+
+    private GenreOfFilm mapIdToGenre(int id) {
+        switch (id) {
+            case 1:
+                return GenreOfFilm.COMEDY;
+            case 2:
+                return GenreOfFilm.DRAMA;
+            case 3:
+                return GenreOfFilm.CARTOON;
+            case 4:
+                return GenreOfFilm.THRILLER;
+            case 5:
+                return GenreOfFilm.DOCUMENTARY;
+            case 6:
+                return GenreOfFilm.ACTION;
             default:
                 return null;
         }

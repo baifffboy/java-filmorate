@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.dto.UserDto;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.mapper.UserMapper;
 import ru.yandex.practicum.filmorate.model.User;
@@ -45,10 +46,14 @@ public class UserController {
     @DeleteMapping("/{id}/friends/{friendId}")
     public Collection<UserDto> deleteFriend(@PathVariable Long id,
                                             @PathVariable Long friendId) {
-        Collection<User> friends = userService.deleteFriendInStorage(id, friendId);
-        return friends.stream()
-                .map(UserMapper::toDto)
-                .collect(Collectors.toList());
+        try {
+            Collection<User> friends = userService.deleteFriendInStorage(id, friendId);
+            return friends.stream()
+                    .map(UserMapper::toDto)
+                    .collect(Collectors.toList());
+        } catch (NotFoundException e) {
+            throw new NotFoundException(e.getMessage());
+        }
     }
 
     @GetMapping("/{id}/friends")
