@@ -12,22 +12,15 @@ import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.controller.GenreController;
 import ru.yandex.practicum.filmorate.controller.MpaController;
 import ru.yandex.practicum.filmorate.controller.UserController;
-import ru.yandex.practicum.filmorate.dto.FilmDto;
-import ru.yandex.practicum.filmorate.dto.GenreDto;
-import ru.yandex.practicum.filmorate.dto.MpaDto;
-import ru.yandex.practicum.filmorate.dto.UserDto;
+import ru.yandex.practicum.filmorate.dto.*;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
-import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.model.GenreOfFilm;
-import ru.yandex.practicum.filmorate.model.MotionPictureAssociation;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -72,17 +65,25 @@ class FilmorateApplicationFilmsTests {
         jdbcTemplate.execute("ALTER TABLE users ALTER COLUMN id RESTART WITH 1");
     }
 
-    private Film createValidFilm(String name, String description, LocalDate releaseDate, int duration) {
-        Film film = new Film();
-        film.setName(name);
-        film.setDescription(description);
-        film.setReleaseDate(releaseDate);
-        film.setDuration(duration);
-        Set<GenreOfFilm> genres = new LinkedHashSet<>();
-        genres.add(GenreOfFilm.COMEDY);
-        film.setGenres(genres);
-        film.setMpa(MotionPictureAssociation.PG13);
-        return film;
+    // ИСПРАВЛЕНО: создаём FilmCreateRequest вместо Film
+    private FilmCreateRequest createValidFilmRequest(String name, String description, LocalDate releaseDate, int duration) {
+        FilmCreateRequest request = new FilmCreateRequest();
+        request.setName(name);
+        request.setDescription(description);
+        request.setReleaseDate(releaseDate);
+        request.setDuration(duration);
+
+        MpaRequest mpaRequest = new MpaRequest();
+        mpaRequest.setId(3); // PG-13
+        request.setMpa(mpaRequest);
+
+        List<GenreRequest> genres = new ArrayList<>();
+        GenreRequest genreRequest = new GenreRequest();
+        genreRequest.setId(1); // Комедия
+        genres.add(genreRequest);
+        request.setGenres(genres);
+
+        return request;
     }
 
     private User createValidUser(String email, String login, String name, LocalDate birthday) {
@@ -96,9 +97,9 @@ class FilmorateApplicationFilmsTests {
 
     @Test
     void postFilm_WithValidFilm_ShouldSucceed() throws ValidationException {
-        Film film = createValidFilm("Valid Film", "Valid description", LocalDate.of(2024, 1, 1), 120);
+        FilmCreateRequest request = createValidFilmRequest("Valid Film", "Valid description", LocalDate.of(2024, 1, 1), 120);
 
-        FilmDto result = filmController.postFilm(film);
+        FilmDto result = filmController.postFilm(request);
 
         assertNotNull(result.getId());
         assertEquals("Valid Film", result.getName());
@@ -111,11 +112,11 @@ class FilmorateApplicationFilmsTests {
 
     @Test
     void postFilm_WithReleaseDateBefore18951228_ShouldThrowException() {
-        Film film = createValidFilm("Valid Film", "Valid description", LocalDate.of(1895, 12, 27), 120);
+        FilmCreateRequest request = createValidFilmRequest("Valid Film", "Valid description", LocalDate.of(1895, 12, 27), 120);
 
         ValidationException exception = assertThrows(
                 ValidationException.class,
-                () -> filmController.postFilm(film)
+                () -> filmController.postFilm(request)
         );
 
         assertEquals("Дата релиза должна быть не раньше 28 декабря 1895 года", exception.getMessage());
@@ -123,17 +124,17 @@ class FilmorateApplicationFilmsTests {
 
     @Test
     void postFilm_WithReleaseDateExactly18951228_ShouldSucceed() throws ValidationException {
-        Film film = createValidFilm("Valid Film", "Valid description", LocalDate.of(1895, 12, 28), 120);
+        FilmCreateRequest request = createValidFilmRequest("Valid Film", "Valid description", LocalDate.of(1895, 12, 28), 120);
 
-        FilmDto result = filmController.postFilm(film);
+        FilmDto result = filmController.postFilm(request);
 
         assertNotNull(result);
     }
 
     @Test
     void getFilmById_WithExistingId_ShouldReturnFilm() throws ValidationException {
-        Film film = createValidFilm("Test Film", "Description", LocalDate.now(), 100);
-        FilmDto created = filmController.postFilm(film);
+        FilmCreateRequest request = createValidFilmRequest("Test Film", "Description", LocalDate.now(), 100);
+        FilmDto created = filmController.postFilm(request);
 
         FilmDto result = filmController.getFilmById(created.getId());
 
@@ -150,13 +151,23 @@ class FilmorateApplicationFilmsTests {
 
     @Test
     void putFilm_WithValidExistingFilm_ShouldUpdate() throws ValidationException {
-        Film film = createValidFilm("Original Name", "Original description", LocalDate.of(2024, 1, 1), 120);
-        FilmDto created = filmController.postFilm(film);
+        // Создаём фильм
+        FilmCreateRequest createRequest = createValidFilmRequest("Original Name", "Original description", LocalDate.of(2024, 1, 1), 120);
+        FilmDto created = filmController.postFilm(createRequest);
 
-        Film updatedFilm = createValidFilm("Updated Name", "Updated description", LocalDate.of(2025, 1, 1), 150);
-        updatedFilm.setId(created.getId());
+        // Создаём запрос на обновление
+        FilmUpdateRequest updateRequest = new FilmUpdateRequest();
+        updateRequest.setId(created.getId());
+        updateRequest.setName("Updated Name");
+        updateRequest.setDescription("Updated description");
+        updateRequest.setReleaseDate(LocalDate.of(2025, 1, 1));
+        updateRequest.setDuration(150);
 
-        FilmDto result = filmController.putFilm(updatedFilm);
+        MpaRequest mpaRequest = new MpaRequest();
+        mpaRequest.setId(3);
+        updateRequest.setMpa(mpaRequest);
+
+        FilmDto result = filmController.putFilm(updateRequest);
 
         assertEquals("Updated Name", result.getName());
         assertEquals("Updated description", result.getDescription());
@@ -167,21 +178,33 @@ class FilmorateApplicationFilmsTests {
 
     @Test
     void putFilm_WithNonExistentId_ShouldThrowException() {
-        Film film = createValidFilm("Test", "Test", LocalDate.now(), 100);
-        film.setId(999L);
+        FilmUpdateRequest updateRequest = new FilmUpdateRequest();
+        updateRequest.setId(999L);
+        updateRequest.setName("Test");
+        updateRequest.setDescription("Test");
+        updateRequest.setReleaseDate(LocalDate.now());
+        updateRequest.setDuration(100);
+
+        MpaRequest mpaRequest = new MpaRequest();
+        mpaRequest.setId(1);
+        updateRequest.setMpa(mpaRequest);
 
         assertThrows(NotFoundException.class,
-                () -> filmController.putFilm(film));
+                () -> filmController.putFilm(updateRequest));
     }
 
     @Test
     void putFilm_WithNullId_ShouldThrowException() {
-        Film film = createValidFilm("Test", "Test", LocalDate.now(), 100);
-        film.setId(null);
+        FilmUpdateRequest updateRequest = new FilmUpdateRequest();
+        updateRequest.setId(null);
+        updateRequest.setName("Test");
+        updateRequest.setDescription("Test");
+        updateRequest.setReleaseDate(LocalDate.now());
+        updateRequest.setDuration(100);
 
         ValidationException exception = assertThrows(
                 ValidationException.class,
-                () -> filmController.putFilm(film)
+                () -> filmController.putFilm(updateRequest)
         );
 
         assertEquals("Id должен быть указан", exception.getMessage());
@@ -189,10 +212,10 @@ class FilmorateApplicationFilmsTests {
 
     @Test
     void getAllFilms_ShouldReturnAllFilms() throws ValidationException {
-        Film film1 = createValidFilm("Film 1", "Desc 1", LocalDate.now(), 90);
-        Film film2 = createValidFilm("Film 2", "Desc 2", LocalDate.now(), 120);
-        filmController.postFilm(film1);
-        filmController.postFilm(film2);
+        FilmCreateRequest request1 = createValidFilmRequest("Film 1", "Desc 1", LocalDate.now(), 90);
+        FilmCreateRequest request2 = createValidFilmRequest("Film 2", "Desc 2", LocalDate.now(), 120);
+        filmController.postFilm(request1);
+        filmController.postFilm(request2);
 
         Collection<FilmDto> allFilms = filmController.getAllFilms();
 
@@ -202,7 +225,6 @@ class FilmorateApplicationFilmsTests {
     @Test
     void getAllFilms_WhenNoFilms_ShouldReturnEmptyCollection() {
         Collection<FilmDto> allFilms = filmController.getAllFilms();
-
         assertTrue(allFilms.isEmpty());
     }
 
@@ -210,8 +232,9 @@ class FilmorateApplicationFilmsTests {
     void likeFilm_ShouldAddUserToLikes() throws ValidationException {
         User user = createValidUser("user@test.com", "user1", "User Name", LocalDate.now().minusYears(20));
         UserDto createdUser = userController.postUser(user);
-        Film film = createValidFilm("Film", "Desc", LocalDate.now(), 100);
-        FilmDto createdFilm = filmController.postFilm(film);
+
+        FilmCreateRequest request = createValidFilmRequest("Film", "Desc", LocalDate.now(), 100);
+        FilmDto createdFilm = filmController.postFilm(request);
 
         FilmDto result = filmController.likeFilm(createdFilm.getId(), createdUser.getId());
 
@@ -230,8 +253,8 @@ class FilmorateApplicationFilmsTests {
 
     @Test
     void likeFilm_WithNonExistentUser_ShouldThrowException() throws ValidationException {
-        Film film = createValidFilm("Film", "Desc", LocalDate.now(), 100);
-        FilmDto createdFilm = filmController.postFilm(film);
+        FilmCreateRequest request = createValidFilmRequest("Film", "Desc", LocalDate.now(), 100);
+        FilmDto createdFilm = filmController.postFilm(request);
 
         assertThrows(NotFoundException.class,
                 () -> filmController.likeFilm(createdFilm.getId(), 999L));
@@ -241,8 +264,9 @@ class FilmorateApplicationFilmsTests {
     void likeFilm_MultipleTimes_ShouldNotDuplicate() throws ValidationException {
         User user = createValidUser("user@test.com", "user1", "User Name", LocalDate.now().minusYears(20));
         UserDto createdUser = userController.postUser(user);
-        Film film = createValidFilm("Film", "Desc", LocalDate.now(), 100);
-        FilmDto createdFilm = filmController.postFilm(film);
+
+        FilmCreateRequest request = createValidFilmRequest("Film", "Desc", LocalDate.now(), 100);
+        FilmDto createdFilm = filmController.postFilm(request);
 
         filmController.likeFilm(createdFilm.getId(), createdUser.getId());
         filmController.likeFilm(createdFilm.getId(), createdUser.getId());
@@ -255,8 +279,10 @@ class FilmorateApplicationFilmsTests {
     void dislikeFilm_ShouldRemoveUserFromLikes() throws ValidationException {
         User user = createValidUser("user@test.com", "user1", "User Name", LocalDate.now().minusYears(20));
         UserDto createdUser = userController.postUser(user);
-        Film film = createValidFilm("Film", "Desc", LocalDate.now(), 100);
-        FilmDto createdFilm = filmController.postFilm(film);
+
+        FilmCreateRequest request = createValidFilmRequest("Film", "Desc", LocalDate.now(), 100);
+        FilmDto createdFilm = filmController.postFilm(request);
+
         filmController.likeFilm(createdFilm.getId(), createdUser.getId());
 
         FilmDto result = filmController.dislikeFilm(createdFilm.getId(), createdUser.getId());
@@ -269,8 +295,9 @@ class FilmorateApplicationFilmsTests {
     void dislikeFilm_WhenUserDidNotLike_ShouldThrowException() throws ValidationException {
         User user = createValidUser("user@test.com", "user1", "User Name", LocalDate.now().minusYears(20));
         UserDto createdUser = userController.postUser(user);
-        Film film = createValidFilm("Film", "Desc", LocalDate.now(), 100);
-        FilmDto createdFilm = filmController.postFilm(film);
+
+        FilmCreateRequest request = createValidFilmRequest("Film", "Desc", LocalDate.now(), 100);
+        FilmDto createdFilm = filmController.postFilm(request);
 
         assertThrows(NotFoundException.class,
                 () -> filmController.dislikeFilm(createdFilm.getId(), createdUser.getId()));
@@ -285,12 +312,13 @@ class FilmorateApplicationFilmsTests {
         UserDto createdUser2 = userController.postUser(user2);
         UserDto createdUser3 = userController.postUser(user3);
 
-        Film film1 = createValidFilm("Film 1", "Desc", LocalDate.now(), 100);
-        Film film2 = createValidFilm("Film 2", "Desc", LocalDate.now(), 100);
-        Film film3 = createValidFilm("Film 3", "Desc", LocalDate.now(), 100);
-        FilmDto createdFilm1 = filmController.postFilm(film1);
-        FilmDto createdFilm2 = filmController.postFilm(film2);
-        FilmDto createdFilm3 = filmController.postFilm(film3);
+        FilmCreateRequest request1 = createValidFilmRequest("Film 1", "Desc", LocalDate.now(), 100);
+        FilmCreateRequest request2 = createValidFilmRequest("Film 2", "Desc", LocalDate.now(), 100);
+        FilmCreateRequest request3 = createValidFilmRequest("Film 3", "Desc", LocalDate.now(), 100);
+
+        FilmDto createdFilm1 = filmController.postFilm(request1);
+        FilmDto createdFilm2 = filmController.postFilm(request2);
+        FilmDto createdFilm3 = filmController.postFilm(request3);
 
         filmController.likeFilm(createdFilm2.getId(), createdUser1.getId());
         filmController.likeFilm(createdFilm2.getId(), createdUser2.getId());
@@ -309,8 +337,8 @@ class FilmorateApplicationFilmsTests {
     @Test
     void getPopularFilms_WithLimitCount_ShouldReturnLimitedResults() throws ValidationException {
         for (int i = 0; i < 5; i++) {
-            Film film = createValidFilm("Film " + i, "Desc", LocalDate.now(), 100);
-            filmController.postFilm(film);
+            FilmCreateRequest request = createValidFilmRequest("Film " + i, "Desc", LocalDate.now(), 100);
+            filmController.postFilm(request);
         }
 
         var popularFilms = filmController.getPopularFilm(3);
@@ -346,7 +374,6 @@ class FilmorateApplicationFilmsTests {
     @Test
     void getGenreById_WhenIdExists_ShouldReturnGenre() {
         GenreDto genre = genreController.getGenreById(1);
-
         assertEquals(1, genre.getId());
         assertEquals("Комедия", genre.getName());
     }
@@ -376,7 +403,6 @@ class FilmorateApplicationFilmsTests {
     @Test
     void getMpaById_WhenIdExists_ShouldReturnRating() {
         MpaDto mpa = mpaController.getMpaById(1);
-
         assertEquals(1, mpa.getId());
         assertEquals("G", mpa.getName());
     }

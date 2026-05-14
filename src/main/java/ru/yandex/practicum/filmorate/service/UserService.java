@@ -78,10 +78,11 @@ public class UserService {
     }
 
     public Collection<User> deleteFriendInStorage(Long id, Long friendId) {
+        // Проверяем, существуют ли пользователи
         User user = getUserByIdFromStorage(id);
         User friend = getUserByIdFromStorage(friendId);
 
-        // Проверяем, есть ли дружба
+        // Проверяем, есть ли дружба (ВНИМАНИЕ: проверка должна быть ДО вызова репозитория)
         if (!user.getFriends().contains(friendId)) {
             throw new NotFoundException("Пользователи " + id + " и " + friendId + " не являются друзьями");
         }

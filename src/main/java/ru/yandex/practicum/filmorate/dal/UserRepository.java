@@ -82,12 +82,9 @@ public class UserRepository extends BaseRepository<User> {
     }
 
     public void deleteFriend(long userId, long friendId) {
-        String checkQuery = "SELECT COUNT(*) FROM friends WHERE user_id = ? AND friend_id = ?";
-        Integer count = jdbc.queryForObject(checkQuery, Integer.class, userId, friendId);
-        if (count == 0) {
-            throw new NotFoundException("Дружба между пользователями " + userId + " и " + friendId + " не найдена");
-        }
-        update(DELETE_FRIEND_QUERY, userId, friendId);
+        // Удаляем без дополнительной проверки, так как проверка уже есть в сервисе
+        int rowsDeleted = jdbc.update(DELETE_FRIEND_QUERY, userId, friendId);
+        // Не выбрасываем исключение здесь, так как проверка уже была в сервисе
     }
 
     public List<User> findFriends(long userId) {

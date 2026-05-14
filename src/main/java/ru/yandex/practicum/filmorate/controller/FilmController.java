@@ -4,9 +4,7 @@ import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.dto.FilmDto;
-import ru.yandex.practicum.filmorate.dto.GenreDto;
-import ru.yandex.practicum.filmorate.dto.MpaDto;
+import ru.yandex.practicum.filmorate.dto.*;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
@@ -67,35 +65,60 @@ public class FilmController {
     }
 
     @PostMapping
-    public FilmDto postFilm(@Valid @RequestBody Film film) throws ValidationException {
-        log.info("Пользователь публикует новый фильм: {}", film);
+    public FilmDto postFilm(@Valid @RequestBody FilmCreateRequest request) throws ValidationException {
+        log.info("Пользователь публикует новый фильм: {}", request);
 
         // Валидация даты релиза
-        if (film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
+        if (request.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
             throw new ValidationException("Дата релиза должна быть не раньше 28 декабря 1895 года");
         }
 
         // ВАЖНО: Валидация MPA - проверяем, существует ли такой id
-        if (film.getMpa() != null) {
+        Integer mpaId = null;
+        if (request.getMpa() != null && request.getMpa().getId() != null) {
+            mpaId = request.getMpa().getId();
             try {
-                // Пытаемся получить MPA по id (если сервис работает с id)
-                int mpaId = mapMpaToId(film.getMpa());
                 mpaService.getMpaById(mpaId);
             } catch (NotFoundException e) {
-                throw new NotFoundException("Рейтинг MPA с id = " + mapMpaToId(film.getMpa()) + " не найден");
+                throw new NotFoundException("Рейтинг MPA с id = " + mpaId + " не найден");
             }
         }
 
         // ВАЖНО: Валидация жанров - проверяем, существуют ли такие id
-        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
-            for (GenreOfFilm genre : film.getGenres()) {
-                try {
-                    int genreId = mapGenreToId(genre);
-                    genreService.getGenreById(genreId);
-                } catch (NotFoundException e) {
-                    throw new NotFoundException("Жанр с id = " + mapGenreToId(genre) + " не найден");
+        if (request.getGenres() != null && !request.getGenres().isEmpty()) {
+            for (GenreRequest genreReq : request.getGenres()) {
+                if (genreReq.getId() != null) {
+                    try {
+                        genreService.getGenreById(genreReq.getId());
+                    } catch (NotFoundException e) {
+                        throw new NotFoundException("Жанр с id = " + genreReq.getId() + " не найден");
+                    }
                 }
             }
+        }
+
+        // Конвертируем запрос в Film
+        Film film = new Film();
+        film.setName(request.getName());
+        film.setDescription(request.getDescription());
+        film.setReleaseDate(request.getReleaseDate());
+        film.setDuration(request.getDuration());
+
+        if (mpaId != null) {
+            film.setMpa(mapIdToMpa(mpaId));
+        }
+
+        if (request.getGenres() != null && !request.getGenres().isEmpty()) {
+            Set<GenreOfFilm> genres = new LinkedHashSet<>();
+            for (GenreRequest genreReq : request.getGenres()) {
+                if (genreReq.getId() != null) {
+                    GenreOfFilm genre = mapIdToGenre(genreReq.getId());
+                    if (genre != null) {
+                        genres.add(genre);
+                    }
+                }
+            }
+            film.setGenres(genres);
         }
 
         Film createdFilm = filmService.addFilmInStorage(film);
@@ -103,36 +126,64 @@ public class FilmController {
     }
 
     @PutMapping
-    public FilmDto putFilm(@Valid @RequestBody Film film) throws ValidationException {
-        log.info("Пользователь редактирует фильм: {}", film);
+    public FilmDto putFilm(@Valid @RequestBody FilmUpdateRequest request) throws ValidationException {
+        log.info("Пользователь редактирует фильм: {}", request);
 
-        if (film.getId() == null) {
+        if (request.getId() == null) {
             throw new ValidationException("Id должен быть указан");
         }
 
-        if (film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
+        if (request.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
             throw new ValidationException("Дата релиза должна быть не раньше 28 декабря 1895 года");
         }
 
-        // ВАЖНО: Валидация MPA
-        if (film.getMpa() != null) {
+        // Валидация MPA
+        Integer mpaId = null;
+        if (request.getMpa() != null && request.getMpa().getId() != null) {
+            mpaId = request.getMpa().getId();
             try {
-                int mpaId = mapMpaToId(film.getMpa());
                 mpaService.getMpaById(mpaId);
             } catch (NotFoundException e) {
-                throw new NotFoundException("Рейтинг MPA с id = " + mapMpaToId(film.getMpa()) + " не найден");
+                throw new NotFoundException("Рейтинг MPA с id = " + mpaId + " не найден");
             }
         }
 
-        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
-            for (GenreOfFilm genre : film.getGenres()) {
-                try {
-                    int genreId = mapGenreToId(genre);
-                    genreService.getGenreById(genreId);
-                } catch (NotFoundException e) {
-                    throw new NotFoundException("Жанр с id = " + mapGenreToId(genre) + " не найден");
+        // Валидация жанров
+        if (request.getGenres() != null && !request.getGenres().isEmpty()) {
+            for (GenreRequest genreReq : request.getGenres()) {
+                if (genreReq.getId() != null) {
+                    try {
+                        genreService.getGenreById(genreReq.getId());
+                    } catch (NotFoundException e) {
+                        throw new NotFoundException("Жанр с id = " + genreReq.getId() + " не найден");
+                    }
                 }
             }
+        }
+
+        // Конвертируем запрос в Film
+        Film film = new Film();
+        film.setId(request.getId());
+        film.setName(request.getName());
+        film.setDescription(request.getDescription());
+        film.setReleaseDate(request.getReleaseDate());
+        film.setDuration(request.getDuration());
+
+        if (mpaId != null) {
+            film.setMpa(mapIdToMpa(mpaId));
+        }
+
+        if (request.getGenres() != null && !request.getGenres().isEmpty()) {
+            Set<GenreOfFilm> genres = new LinkedHashSet<>();
+            for (GenreRequest genreReq : request.getGenres()) {
+                if (genreReq.getId() != null) {
+                    GenreOfFilm genre = mapIdToGenre(genreReq.getId());
+                    if (genre != null) {
+                        genres.add(genre);
+                    }
+                }
+            }
+            film.setGenres(genres);
         }
 
         Film updatedFilm = filmService.updateFilmInStorage(film);
