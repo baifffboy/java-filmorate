@@ -81,9 +81,8 @@ public class UserRepository extends BaseRepository<User> {
     }
 
     public void deleteFriend(long userId, long friendId) {
-        // Удаляем без дополнительной проверки, так как проверка уже есть в сервисе
-        int rowsDeleted = jdbc.update(DELETE_FRIEND_QUERY, userId, friendId);
-        // Не выбрасываем исключение здесь, так как проверка уже была в сервисе
+        // Просто удаляем, если запись есть - удалится, если нет - ничего не произойдёт
+        jdbc.update(DELETE_FRIEND_QUERY, userId, friendId);
     }
 
     public List<User> findFriends(long userId) {
