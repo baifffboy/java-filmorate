@@ -66,6 +66,25 @@ public class GenreMapper {
     }
 
     public static GenreResponse mapGenretoGenreResponse(Integer genreId) {
-        return new GenreResponse(genreId, mapIdToGenre(genreId).toString());
+        return new GenreResponse(genreId, mapGenreByIdToString(genreId));
+    }
+
+    public static String mapGenreByIdToString(Integer genreId) {
+        switch (genreId) {
+            case 1:
+                return "Комедия";
+            case 2:
+                return "Драма";
+            case 3:
+                return "Мультфильм";
+            case 4:
+                return "Триллер";
+            case 5:
+                return "Документальный";
+            case 6:
+                return "Боевик";
+            default:
+                throw new NotFoundException("Данного жанра нет в списке!");
+        }
     }
 }
