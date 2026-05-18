@@ -28,18 +28,18 @@ public class FilmMapper {
 
         if (film.getMpa() != null) {
             Integer mpaId = MapMapper.mapMpaToId(film.getMpa());
-            MpaResponse MpaResponse = MapMapper.mapMpatoMpaResponse(mpaId);
-            dto.setMpa(MpaResponse);
+            MpaResponse mpaResponse = MapMapper.mapMpatoMpaResponse(mpaId);
+            dto.setMpa(mpaResponse);
         }
 
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
-            Set<GenreResponse> GenreResponses = new LinkedHashSet<>();
+            Set<GenreResponse> genreResponses = new LinkedHashSet<>();
             for (GenreOfFilm genre : film.getGenres()) {
                 Integer genreId = GenreMapper.mapGenreToId(genre);
-                GenreResponse GenreResponse = GenreMapper.mapGenretoGenreResponse(genreId);
-                GenreResponses.add(GenreResponse);
+                GenreResponse genreResponse = GenreMapper.mapGenretoGenreResponse(genreId);
+                genreResponses.add(genreResponse);
             }
-            dto.setGenres(GenreResponses);
+            dto.setGenres(genreResponses);
         }
 
         return dto;
