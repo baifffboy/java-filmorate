@@ -41,6 +41,23 @@ public class MapMapper {
     }
 
     public static MpaResponse mapMpatoMpaResponse(Integer mpaId) {
-        return new MpaResponse(mpaId, mapIdToMpa(mpaId).toString());
+        return new MpaResponse(mpaId, getMpaByIdtoString(mpaId));
+    }
+
+    public static String getMpaByIdtoString(int id) {
+        switch (id) {
+            case 1:
+                return "G";
+            case 2:
+                return "PG";
+            case 3:
+                return "PG-13";
+            case 4:
+                return "R";
+            case 5:
+                return "NC-17";
+            default:
+                throw new NotFoundException("Рейтинг MPA с id = " + id + " не найден");
+        }
     }
 }
