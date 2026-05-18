@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
+import ru.yandex.practicum.filmorate.mapper.MapMapper;
 import ru.yandex.practicum.filmorate.model.MotionPictureAssociation;
 
 import java.io.IOException;
@@ -15,25 +16,21 @@ public class MpaDeserializer extends JsonDeserializer<MotionPictureAssociation> 
             throws IOException {
         JsonNode node = p.getCodec().readTree(p);
 
-        // Если пришёл объект с полем id
         if (node.has("id")) {
-            int id = node.get("id").asInt();
-            return mapIdToMpa(id);
+            Integer id = node.get("id").asInt();
+            return MapMapper.mapIdToMpa(id);
         }
 
-        // Если пришло число
         if (node.isInt()) {
-            return mapIdToMpa(node.asInt());
+            return MapMapper.mapIdToMpa(node.asInt());
         }
 
-        // Если пришла строка
         String value = node.asText();
         if (value != null && !value.isEmpty()) {
             try {
-                int id = Integer.parseInt(value);
-                return mapIdToMpa(id);
+                Integer id = Integer.parseInt(value);
+                return MapMapper.mapIdToMpa(id);
             } catch (NumberFormatException e) {
-                // Пробуем как название энума
                 try {
                     return MotionPictureAssociation.valueOf(value);
                 } catch (IllegalArgumentException ex) {
@@ -43,22 +40,5 @@ public class MpaDeserializer extends JsonDeserializer<MotionPictureAssociation> 
         }
 
         return null;
-    }
-
-    private MotionPictureAssociation mapIdToMpa(int id) {
-        switch (id) {
-            case 1:
-                return MotionPictureAssociation.G;
-            case 2:
-                return MotionPictureAssociation.PG;
-            case 3:
-                return MotionPictureAssociation.PG13;
-            case 4:
-                return MotionPictureAssociation.R;
-            case 5:
-                return MotionPictureAssociation.NC17;
-            default:
-                return null;
-        }
     }
 }

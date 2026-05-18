@@ -4,9 +4,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.mapper.GenreMapper;
+import ru.yandex.practicum.filmorate.mapper.MapMapper;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.GenreOfFilm;
-import ru.yandex.practicum.filmorate.model.MotionPictureAssociation;
 
 import java.sql.Date;
 import java.util.*;
@@ -75,86 +76,10 @@ public class FilmRepository extends BaseRepository<Film> {
     private void loadGenresForFilm(Film film) {
         List<String> genreNames = jdbc.queryForList(FIND_FILM_GENRES_QUERY, String.class, film.getId());
         Set<GenreOfFilm> genres = genreNames.stream()
-                .map(this::mapStringToGenre)
+                .map(GenreMapper::mapStringToGenre)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         film.setGenres(genres);
-    }
-
-    private GenreOfFilm mapStringToGenre(String genreName) {
-        if (genreName == null) return null;
-        switch (genreName) {
-            case "Комедия":
-                return GenreOfFilm.COMEDY;
-            case "Драма":
-                return GenreOfFilm.DRAMA;
-            case "Мультфильм":
-                return GenreOfFilm.CARTOON;
-            case "Триллер":
-                return GenreOfFilm.THRILLER;
-            case "Документальный":
-                return GenreOfFilm.DOCUMENTARY;
-            case "Боевик":
-                return GenreOfFilm.ACTION;
-            default:
-                return null;
-        }
-    }
-
-    private Integer mapGenreToId(GenreOfFilm genre) {
-        if (genre == null) return null;
-        switch (genre) {
-            case COMEDY:
-                return 1;
-            case DRAMA:
-                return 2;
-            case CARTOON:
-                return 3;
-            case THRILLER:
-                return 4;
-            case DOCUMENTARY:
-                return 5;
-            case ACTION:
-                return 6;
-            default:
-                return null;
-        }
-    }
-
-    private Integer mapMpaToId(MotionPictureAssociation mpa) {
-        if (mpa == null) return null;
-        switch (mpa) {
-            case G:
-                return 1;
-            case PG:
-                return 2;
-            case PG13:
-                return 3;
-            case R:
-                return 4;
-            case NC17:
-                return 5;
-            default:
-                return null;
-        }
-    }
-
-    private MotionPictureAssociation mapIdToMpa(Integer mpaId) {
-        if (mpaId == null) return null;
-        switch (mpaId) {
-            case 1:
-                return MotionPictureAssociation.G;
-            case 2:
-                return MotionPictureAssociation.PG;
-            case 3:
-                return MotionPictureAssociation.PG13;
-            case 4:
-                return MotionPictureAssociation.R;
-            case 5:
-                return MotionPictureAssociation.NC17;
-            default:
-                return null;
-        }
     }
 
     public List<Film> findAll() {
@@ -165,20 +90,16 @@ public class FilmRepository extends BaseRepository<Film> {
         Optional<Film> filmOpt = findOne(FIND_BY_ID_QUERY, filmId);
         filmOpt.ifPresent(film -> {
             Integer mpaId = null;
-            try {
-                mpaId = jdbc.queryForObject("SELECT mpa_id FROM films WHERE id = ?", Integer.class, filmId);
-            } catch (Exception e) {
-                // mpa_id может быть null
-            }
+            mpaId = jdbc.queryForObject("SELECT mpa_id FROM films WHERE id = ?", Integer.class, filmId);
             if (mpaId != null) {
-                film.setMpa(mapIdToMpa(mpaId));
+                film.setMpa(MapMapper.mapIdToMpa(mpaId));
             }
         });
         return filmOpt;
     }
 
     public Film save(Film film) {
-        Integer mpaId = mapMpaToId(film.getMpa());
+        Integer mpaId = MapMapper.mapMpaToId(film.getMpa());
         long id = insert(
                 INSERT_QUERY,
                 film.getName(),
@@ -190,13 +111,13 @@ public class FilmRepository extends BaseRepository<Film> {
         film.setId(id);
         updateGenres(film);
         if (film.getMpa() != null) {
-            film.setMpa(mapIdToMpa(mpaId));
+            film.setMpa(MapMapper.mapIdToMpa(mpaId));
         }
         return film;
     }
 
     public Film update(Film film) {
-        Integer mpaId = mapMpaToId(film.getMpa());
+        Integer mpaId = MapMapper.mapMpaToId(film.getMpa());
         update(
                 UPDATE_QUERY,
                 film.getName(),
@@ -208,7 +129,7 @@ public class FilmRepository extends BaseRepository<Film> {
         );
         updateGenres(film);
         if (film.getMpa() != null) {
-            film.setMpa(mapIdToMpa(mpaId));
+            film.setMpa(MapMapper.mapIdToMpa(mpaId));
         }
         return film;
     }
@@ -217,7 +138,7 @@ public class FilmRepository extends BaseRepository<Film> {
         jdbc.update(DELETE_FILM_GENRES_QUERY, film.getId());
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
             for (GenreOfFilm genre : film.getGenres()) {
-                Integer genreId = mapGenreToId(genre);
+                Integer genreId = GenreMapper.mapGenreToId(genre);
                 if (genreId != null) {
                     jdbc.update(ADD_FILM_GENRE_QUERY, film.getId(), genreId);
                 }

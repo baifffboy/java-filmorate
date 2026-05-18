@@ -5,8 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.dto.UserDto;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.dto.users.UserCreateRequest;
+import ru.yandex.practicum.filmorate.dto.users.UserResponse;
+import ru.yandex.practicum.filmorate.dto.users.UserUpdateRequest;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.mapper.UserMapper;
 import ru.yandex.practicum.filmorate.model.User;
@@ -29,70 +30,69 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public UserDto getUserById(@PathVariable Long id) {
-        User user = userService.getUserByIdFromStorage(id);
-        return UserMapper.toDto(user);
+    public UserResponse getUserById(@PathVariable Long id) {
+        log.info("Пользователь запросил человека с id={}", id);
+        return UserMapper.toUserResponse(userService.getUserByIdFromStorage(id));
     }
 
     @PutMapping("/{id}/friends/{friendId}")
-    public Collection<UserDto> addFriend(@PathVariable Long id,
-                                         @PathVariable Long friendId) {
+    public Collection<UserResponse> addFriend(@PathVariable Long id,
+                                              @PathVariable Long friendId) {
+        log.info("Пользователь добавил друга с id={} у id={}", friendId, id);
         Collection<User> friends = userService.addFriendInStorage(id, friendId);
         return friends.stream()
-                .map(UserMapper::toDto)
+                .map(UserMapper::toUserResponse)
                 .collect(Collectors.toList());
     }
 
     @DeleteMapping("/{id}/friends/{friendId}")
-    public Collection<UserDto> deleteFriend(@PathVariable Long id,
-                                            @PathVariable Long friendId) {
-        try {
-            Collection<User> friends = userService.deleteFriendInStorage(id, friendId);
-            return friends.stream()
-                    .map(UserMapper::toDto)
-                    .collect(Collectors.toList());
-        } catch (NotFoundException e) {
-            throw new NotFoundException(e.getMessage());
-        }
+    public Collection<UserResponse> deleteFriend(@PathVariable Long id,
+                                                 @PathVariable Long friendId) {
+        log.info("Пользователь удалил друга с id={} у id={}", friendId, id);
+        Collection<User> friends = userService.deleteFriendInStorage(id, friendId);
+        return friends.stream()
+                .map(UserMapper::toUserResponse)
+                .collect(Collectors.toList());
+
     }
 
     @GetMapping("/{id}/friends")
-    public Collection<UserDto> getFriends(@PathVariable Long id) {
+    public Collection<UserResponse> getFriends(@PathVariable Long id) {
+        log.info("Пользователь запросил друзей id={}", id);
         Collection<User> friends = userService.getFriends(id);
         return friends.stream()
-                .map(UserMapper::toDto)
+                .map(UserMapper::toUserResponse)
                 .collect(Collectors.toList());
     }
 
     @GetMapping("/{id}/friends/common/{otherId}")
-    public Collection<UserDto> commonFriend(@PathVariable Long id,
-                                            @PathVariable Long otherId) {
+    public Collection<UserResponse> commonFriend(@PathVariable Long id,
+                                                 @PathVariable Long otherId) {
+        log.info("Пользователь запросил общих друзей id={} и id={}", id, otherId);
         Collection<User> commonFriends = userService.getCommonFriends(id, otherId);
         return commonFriends.stream()
-                .map(UserMapper::toDto)
+                .map(UserMapper::toUserResponse)
                 .collect(Collectors.toList());
     }
 
     @PostMapping
-    public UserDto postUser(@Valid @RequestBody User user) throws ValidationException {
+    public UserResponse postUser(@Valid @RequestBody UserCreateRequest user) throws ValidationException {
         log.info("Создание пользователя: {}", user);
-        User createdUser = userService.addUserInStorage(user);
-        return UserMapper.toDto(createdUser);
+        return UserMapper.toUserResponse(userService.addUserInStorage(user));
     }
 
     @PutMapping
-    public UserDto putUser(@Valid @RequestBody User user) throws ValidationException {
+    public UserResponse putUser(@Valid @RequestBody UserUpdateRequest user) throws ValidationException {
         log.info("Пользователь редактирует пользователя " + user.toString());
-        User updatedUser = userService.updateUserInStorage(user);
-        return UserMapper.toDto(updatedUser);
+        return UserMapper.toUserResponse(userService.updateUserInStorage(user));
     }
 
     @GetMapping
-    public Collection<UserDto> getAllUsers() {
+    public Collection<UserResponse> getAllUsers() {
         log.info("Пользователь запросил всех пользователей");
         Collection<User> users = userService.getAllUsersFromStorage();
         return users.stream()
-                .map(UserMapper::toDto)
+                .map(UserMapper::toUserResponse)
                 .collect(Collectors.toList());
     }
 }

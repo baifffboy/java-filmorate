@@ -1,13 +1,13 @@
-package ru.yandex.practicum.filmorate.dto;
+package ru.yandex.practicum.filmorate.dto.mpa;
 
 import lombok.Data;
 
 @Data
-public class GenreDto {
+public class MpaResponse {
     private Integer id;
     private String name;
 
-    public GenreDto(Integer id, String name) {
+    public MpaResponse(Integer id, String name) {
         this.id = id;
         this.name = name;
     }

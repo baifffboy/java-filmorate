@@ -81,7 +81,6 @@ public class UserRepository extends BaseRepository<User> {
     }
 
     public void deleteFriend(long userId, long friendId) {
-        // Просто удаляем, если запись есть - удалится, если нет - ничего не произойдёт
         jdbc.update(DELETE_FRIEND_QUERY, userId, friendId);
     }
 

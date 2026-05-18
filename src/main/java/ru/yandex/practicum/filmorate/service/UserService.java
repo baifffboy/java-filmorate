@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.dal.UserRepository;
+import ru.yandex.practicum.filmorate.dto.users.UserCreateRequest;
+import ru.yandex.practicum.filmorate.dto.users.UserUpdateRequest;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
@@ -38,7 +40,14 @@ public class UserService {
         return userRepository.findAll();
     }
 
-    public User addUserInStorage(User user) {
+    public User addUserInStorage(UserCreateRequest request) {
+
+        User user = new User();
+        user.setLogin(request.getLogin());
+        user.setBirthday(request.getBirthday());
+        user.setName(request.getName());
+        user.setEmail(request.getEmail());
+
         if (user.getLogin().contains(" ")) {
             log.error("Логин не может содержать пробелы");
             throw new ValidationException("Логин не может быть пустым и содержать пробелы");
@@ -49,7 +58,14 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public User updateUserInStorage(User user) {
+    public User updateUserInStorage(UserUpdateRequest request) {
+        User user = new User();
+        user.setId(request.getId());
+        user.setLogin(request.getLogin());
+        user.setBirthday(request.getBirthday());
+        user.setName(request.getName());
+        user.setEmail(request.getEmail());
+
         if (user.getId() == null) {
             log.error("Ошибка порядкового номера(id) пользователя");
             throw new ValidationException("Id должен быть указан");
@@ -73,28 +89,21 @@ public class UserService {
     public Collection<User> addFriendInStorage(Long id, Long friendId) {
         User user = getUserByIdFromStorage(id);
         User friend = getUserByIdFromStorage(friendId);
-
         userRepository.addFriend(id, friendId);
-
-        // ВАЖНО: Обновляем кэш друзей в объекте пользователя
         user.getFriends().add(friendId);
-        // НЕ добавляем обратную дружбу! Дружба не взаимная в этой версии
-
         return getFriends(id);
     }
 
     public Collection<User> deleteFriendInStorage(Long id, Long friendId) {
-        // Получаем пользователей
+
         User user = getUserByIdFromStorage(id);
         getUserByIdFromStorage(friendId);
 
-        // ВАЖНО: Проверяем, есть ли дружба
         if (!user.getFriends().contains(friendId)) {
             log.warn("Попытка удалить несуществующую дружбу между {} и {}", id, friendId);
             throw new NotFoundException("Пользователи " + id + " и " + friendId + " не являются друзьями");
         }
 
-        // Удаляем дружбу
         userRepository.deleteFriend(id, friendId);
         user.getFriends().remove(friendId);
 

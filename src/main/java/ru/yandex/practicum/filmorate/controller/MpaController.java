@@ -1,17 +1,19 @@
 package ru.yandex.practicum.filmorate.controller;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import ru.yandex.practicum.filmorate.dto.MpaDto;
+import ru.yandex.practicum.filmorate.dto.mpa.MpaResponse;
 import ru.yandex.practicum.filmorate.service.MpaService;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/mpa")
+@Slf4j
 public class MpaController {
 
     private final MpaService mpaService;
@@ -22,12 +24,14 @@ public class MpaController {
     }
 
     @GetMapping
-    public List<MpaDto> getAllMpa() {
+    public List<MpaResponse> getAllMpa() {
+        log.info("Пользователь хочет получить все возрастные категории");
         return mpaService.getAllMpa();
     }
 
     @GetMapping("/{id}")
-    public MpaDto getMpaById(@PathVariable int id) {
+    public MpaResponse getMpaById(@PathVariable int id) {
+        log.info("Пользователь хочет получить возрастную категорию по id={}", id);
         return mpaService.getMpaById(id);
     }
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
+import ru.yandex.practicum.filmorate.mapper.GenreMapper;
 import ru.yandex.practicum.filmorate.model.GenreOfFilm;
 
 import java.io.IOException;
@@ -24,16 +25,12 @@ public class GenreDeserializer extends JsonDeserializer<Set<GenreOfFilm>> {
 
                 if (genreNode.has("id")) {
                     int id = genreNode.get("id").asInt();
-                    genre = mapIdToGenre(id);
+                    genre = GenreMapper.mapIdToGenre(id);
                 } else if (genreNode.isInt()) {
-                    genre = mapIdToGenre(genreNode.asInt());
+                    genre = GenreMapper.mapIdToGenre(genreNode.asInt());
                 } else if (genreNode.isTextual()) {
                     String name = genreNode.asText();
-                    try {
-                        genre = GenreOfFilm.valueOf(name);
-                    } catch (IllegalArgumentException e) {
-                        // Игнорируем
-                    }
+                    genre = GenreOfFilm.valueOf(name);
                 }
 
                 if (genre != null) {
@@ -43,24 +40,5 @@ public class GenreDeserializer extends JsonDeserializer<Set<GenreOfFilm>> {
         }
 
         return genres;
-    }
-
-    private GenreOfFilm mapIdToGenre(int id) {
-        switch (id) {
-            case 1:
-                return GenreOfFilm.COMEDY;
-            case 2:
-                return GenreOfFilm.DRAMA;
-            case 3:
-                return GenreOfFilm.CARTOON;
-            case 4:
-                return GenreOfFilm.THRILLER;
-            case 5:
-                return GenreOfFilm.DOCUMENTARY;
-            case 6:
-                return GenreOfFilm.ACTION;
-            default:
-                return null;
-        }
     }
 }
