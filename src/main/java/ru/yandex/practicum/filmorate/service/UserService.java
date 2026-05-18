@@ -97,11 +97,11 @@ public class UserService {
     public Collection<User> deleteFriendInStorage(Long id, Long friendId) {
 
         User user = getUserByIdFromStorage(id);
-        getUserByIdFromStorage(friendId);
+        User friend = getUserByIdFromStorage(friendId);
 
         if (!user.getFriends().contains(friendId)) {
             log.warn("Попытка удалить несуществующую дружбу между {} и {}", id, friendId);
-            throw new NotFoundException("Пользователи " + id + " и " + friendId + " не являются друзьями");
+            return getFriends(id);
         }
 
         userRepository.deleteFriend(id, friendId);
