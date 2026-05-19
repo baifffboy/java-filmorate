@@ -4,13 +4,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.sql.Date;
 import java.util.List;
 import java.util.Optional;
 
 @Repository("jdbcUserStorage")
-public class UserRepository extends BaseRepository<User> {
+public class UserRepository extends BaseRepository<User> implements UserStorage {
 
     private static final String FIND_ALL_QUERY = "SELECT * FROM users";
     private static final String FIND_BY_ID_QUERY = "SELECT * FROM users WHERE id = ?";
@@ -32,18 +33,22 @@ public class UserRepository extends BaseRepository<User> {
         super(jdbc, mapper);
     }
 
+    @Override
     public List<User> findAll() {
         return findMany(FIND_ALL_QUERY);
     }
 
+    @Override
     public Optional<User> findById(long userId) {
         return findOne(FIND_BY_ID_QUERY, userId);
     }
 
+    @Override
     public Optional<User> findByEmail(String email) {
         return findOne(FIND_BY_EMAIL_QUERY, email);
     }
 
+    @Override
     public User save(User user) {
         long id = insert(
                 INSERT_QUERY,
@@ -56,6 +61,7 @@ public class UserRepository extends BaseRepository<User> {
         return user;
     }
 
+    @Override
     public User update(User user) {
         update(
                 UPDATE_QUERY,
@@ -68,10 +74,12 @@ public class UserRepository extends BaseRepository<User> {
         return user;
     }
 
+    @Override
     public boolean delete(long id) {
         return delete(DELETE_QUERY, id);
     }
 
+    @Override
     public void addFriend(long userId, long friendId) {
         String checkQuery = "SELECT COUNT(*) FROM friends WHERE user_id = ? AND friend_id = ?";
         Integer count = jdbc.queryForObject(checkQuery, Integer.class, userId, friendId);
@@ -80,14 +88,17 @@ public class UserRepository extends BaseRepository<User> {
         }
     }
 
+    @Override
     public void deleteFriend(long userId, long friendId) {
         jdbc.update(DELETE_FRIEND_QUERY, userId, friendId);
     }
 
+    @Override
     public List<User> findFriends(long userId) {
         return findMany(FIND_FRIENDS_QUERY, userId);
     }
 
+    @Override
     public List<User> findCommonFriends(long userId, long otherId) {
         return findMany(FIND_COMMON_FRIENDS_QUERY, userId, otherId);
     }

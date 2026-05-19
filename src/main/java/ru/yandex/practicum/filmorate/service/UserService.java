@@ -4,12 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.dal.UserRepository;
 import ru.yandex.practicum.filmorate.dto.users.UserCreateRequest;
 import ru.yandex.practicum.filmorate.dto.users.UserUpdateRequest;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.util.Collection;
 import java.util.List;
@@ -18,10 +18,10 @@ import java.util.List;
 @Slf4j
 public class UserService {
 
-    private final UserRepository userRepository;
+    private final UserStorage userRepository;
 
     @Autowired
-    public UserService(@Qualifier("jdbcUserStorage") UserRepository userRepository) {
+    public UserService(@Qualifier("jdbcUserStorage") UserStorage userRepository) {
         this.userRepository = userRepository;
     }
 

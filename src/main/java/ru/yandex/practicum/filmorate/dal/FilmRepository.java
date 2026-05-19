@@ -8,13 +8,14 @@ import ru.yandex.practicum.filmorate.mapper.GenreMapper;
 import ru.yandex.practicum.filmorate.mapper.MapMapper;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.GenreOfFilm;
+import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
 import java.sql.Date;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Repository("jdbcFilmStorage")
-public class FilmRepository extends BaseRepository<Film> {
+public class FilmRepository extends BaseRepository<Film> implements FilmStorage {
 
     private static final String FIND_ALL_QUERY =
             "SELECT f.* FROM films f";
@@ -58,7 +59,7 @@ public class FilmRepository extends BaseRepository<Film> {
     }
 
     @Override
-    protected List<Film> findMany(String query, Object... params) {
+    public List<Film> findMany(String query, Object... params) {
         List<Film> films = super.findMany(query, params);
         for (Film film : films) {
             loadGenresForFilm(film);
@@ -67,13 +68,14 @@ public class FilmRepository extends BaseRepository<Film> {
     }
 
     @Override
-    protected Optional<Film> findOne(String query, Object... params) {
+    public Optional<Film> findOne(String query, Object... params) {
         Optional<Film> filmOpt = super.findOne(query, params);
         filmOpt.ifPresent(this::loadGenresForFilm);
         return filmOpt;
     }
 
-    private void loadGenresForFilm(Film film) {
+    @Override
+    public void loadGenresForFilm(Film film) {
         List<String> genreNames = jdbc.queryForList(FIND_FILM_GENRES_QUERY, String.class, film.getId());
         Set<GenreOfFilm> genres = genreNames.stream()
                 .map(GenreMapper::mapStringToGenre)
@@ -82,10 +84,12 @@ public class FilmRepository extends BaseRepository<Film> {
         film.setGenres(genres);
     }
 
+    @Override
     public List<Film> findAll() {
         return findMany(FIND_ALL_QUERY);
     }
 
+    @Override
     public Optional<Film> findById(long filmId) {
         Optional<Film> filmOpt = findOne(FIND_BY_ID_QUERY, filmId);
         filmOpt.ifPresent(film -> {
@@ -98,6 +102,7 @@ public class FilmRepository extends BaseRepository<Film> {
         return filmOpt;
     }
 
+    @Override
     public Film save(Film film) {
         Integer mpaId = MapMapper.mapMpaToId(film.getMpa());
         long id = insert(
@@ -116,6 +121,7 @@ public class FilmRepository extends BaseRepository<Film> {
         return film;
     }
 
+    @Override
     public Film update(Film film) {
         Integer mpaId = MapMapper.mapMpaToId(film.getMpa());
         update(
@@ -134,7 +140,8 @@ public class FilmRepository extends BaseRepository<Film> {
         return film;
     }
 
-    private void updateGenres(Film film) {
+    @Override
+    public void updateGenres(Film film) {
         jdbc.update(DELETE_FILM_GENRES_QUERY, film.getId());
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
             for (GenreOfFilm genre : film.getGenres()) {
@@ -146,10 +153,12 @@ public class FilmRepository extends BaseRepository<Film> {
         }
     }
 
+    @Override
     public boolean delete(long id) {
         return delete(DELETE_QUERY, id);
     }
 
+    @Override
     public void addLike(long filmId, long userId) {
         String checkQuery = "SELECT COUNT(*) FROM likes WHERE film_id = ? AND user_id = ?";
         Integer count = jdbc.queryForObject(checkQuery, Integer.class, filmId, userId);
@@ -158,6 +167,7 @@ public class FilmRepository extends BaseRepository<Film> {
         }
     }
 
+    @Override
     public void deleteLike(long filmId, long userId) {
         String checkQuery = "SELECT COUNT(*) FROM likes WHERE film_id = ? AND user_id = ?";
         Integer count = jdbc.queryForObject(checkQuery, Integer.class, filmId, userId);
@@ -167,10 +177,12 @@ public class FilmRepository extends BaseRepository<Film> {
         update(DELETE_LIKE_QUERY, filmId, userId);
     }
 
+    @Override
     public List<Long> findLikes(long filmId) {
         return jdbc.queryForList(FIND_LIKES_QUERY, Long.class, filmId);
     }
 
+    @Override
     public List<Film> findPopular(int limit) {
         return findMany(FIND_POPULAR_QUERY, limit);
     }
