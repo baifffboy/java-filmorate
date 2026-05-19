@@ -13,7 +13,6 @@ import ru.yandex.practicum.filmorate.mapper.GenreMapper;
 import ru.yandex.practicum.filmorate.mapper.MapMapper;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.GenreOfFilm;
-import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
 import java.time.LocalDate;
@@ -174,7 +173,7 @@ public class FilmService {
 
     public Film postLikeOnFilmInStorage(Long id, Long userId) {
         Film film = getFilmByIdFromStorage(id);
-        User user = userService.getUserByIdFromStorage(userId);
+        userService.getUserByIdFromStorage(userId);
 
         if (!film.getIdOfUsersWhoLikedThisFilm().contains(userId)) {
             filmRepository.addLike(id, userId);
@@ -185,7 +184,6 @@ public class FilmService {
 
     public Film deleteLikeFromFilmInStorage(Long id, Long userId) {
         Film film = getFilmByIdFromStorage(id);
-        userService.getUserByIdFromStorage(userId);
 
         if (!film.getIdOfUsersWhoLikedThisFilm().contains(userId)) {
             throw new NotFoundException("Пользователь " + userId + " не ставил лайк фильму " + id);

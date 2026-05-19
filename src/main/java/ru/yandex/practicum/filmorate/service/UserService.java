@@ -88,7 +88,6 @@ public class UserService {
 
     public Collection<User> addFriendInStorage(Long id, Long friendId) {
         User user = getUserByIdFromStorage(id);
-        User friend = getUserByIdFromStorage(friendId);
         userRepository.addFriend(id, friendId);
         user.getFriends().add(friendId);
         return getFriends(id);
@@ -97,7 +96,6 @@ public class UserService {
     public Collection<User> deleteFriendInStorage(Long id, Long friendId) {
 
         User user = getUserByIdFromStorage(id);
-        User friend = getUserByIdFromStorage(friendId);
 
         if (!user.getFriends().contains(friendId)) {
             log.warn("Попытка удалить несуществующую дружбу между {} и {}", id, friendId);
