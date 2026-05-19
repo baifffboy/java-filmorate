@@ -88,8 +88,10 @@ public class UserService {
 
     public Collection<User> addFriendInStorage(Long id, Long friendId) {
         User user = getUserByIdFromStorage(id);
-        userRepository.addFriend(id, friendId);
-        user.getFriends().add(friendId);
+        if (getUserByIdFromStorage(friendId) != null) {
+            userRepository.addFriend(id, friendId);
+            user.getFriends().add(friendId);
+        }
         return getFriends(id);
     }
 
@@ -97,13 +99,15 @@ public class UserService {
 
         User user = getUserByIdFromStorage(id);
 
-        if (!user.getFriends().contains(friendId)) {
-            log.warn("Попытка удалить несуществующую дружбу между {} и {}", id, friendId);
-            return getFriends(id);
-        }
+        if (getUserByIdFromStorage(friendId) != null) {
+            if (!user.getFriends().contains(friendId)) {
+                log.warn("Попытка удалить несуществующую дружбу между {} и {}", id, friendId);
+                return getFriends(id);
+            }
 
-        userRepository.deleteFriend(id, friendId);
-        user.getFriends().remove(friendId);
+            userRepository.deleteFriend(id, friendId);
+            user.getFriends().remove(friendId);
+        }
 
         return getFriends(id);
     }
