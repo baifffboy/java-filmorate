@@ -1,0 +1,30 @@
+package ru.yandex.practicum.filmorate.dto.users;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
+import lombok.Data;
+
+import java.time.LocalDate;
+
+@Data
+public class UserUpdateRequest {
+    @NotNull(message = "Id должен быть указан")
+    private Long id;
+
+    @NotNull(message = "Email не может быть null")
+    @NotBlank(message = "Email не может быть пустым")
+    @Email(message = "Email должен содержать символ @ и быть корректным")
+    private String email;
+
+    @NotNull(message = "Логин не может быть null")
+    @NotBlank(message = "Логин не может быть пустым")
+    private String login;
+
+    private String name;
+
+    @NotNull(message = "Дата рождения не может быть null")
+    @PastOrPresent(message = "Дата рождения не может быть в будущем")
+    private LocalDate birthday;
+}

@@ -15,6 +15,9 @@ public class User {
     private Long id;
     private Set<Long> friends = new HashSet<>();
 
+    public User() {
+    }
+
     @NotNull(message = "Email не может быть null")
     @NotBlank(message = "Email не может быть пустым")
     @Email(message = "Email должен содержать символ @ и быть корректным")
